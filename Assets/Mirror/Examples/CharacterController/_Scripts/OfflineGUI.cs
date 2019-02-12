@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Mirror.Examples.NetworkLobby
+namespace Mirror.Examples.NetworkCharacterController
 {
     public class OfflineGUI : MonoBehaviour
     {

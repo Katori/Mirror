@@ -1,9 +1,8 @@
 ﻿using UnityEngine;
-using Mirror;
 
-namespace Mirror.Examples.CharacterController
+namespace Mirror.Examples.NetworkCharacterController
 {
-    public class NetworkCharacterControllerExt : NetworkCharacterController
+    public class NetworkCharacterControllerExt : Mirror.NetworkCharacterController
     {
         [Header("Custom Settings")]
         public Camera playerCamera;

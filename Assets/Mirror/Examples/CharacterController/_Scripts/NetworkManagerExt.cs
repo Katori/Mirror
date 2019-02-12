@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using Mirror;
 
-namespace Mirror.Examples.CharacterController
+namespace Mirror.Examples.NetworkCharacterController
 {
     public class NetworkManagerExt : NetworkManager
     {
