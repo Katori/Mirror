@@ -268,7 +268,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 512
   groundSpeed: 5
-  jumpHeight: 5
+  jumpHeight: 10
   mouseSensitivity: 100
   turnSpeedMax: 100
   turnSpeedAccel: 30
@@ -299,20 +299,20 @@ MonoBehaviour:
     sprint: 0
     crouch: 0
     timeStamp: 0
-  rcvdResults:
-    rotation: {x: 0, y: 0, z: 0, w: 0}
-    position: {x: 0, y: 0, z: 0}
-    sprinting: 0
-    crouching: 0
-    timeStamp: 0
   results:
-    rotation: {x: 0, y: 0, z: 0, w: 0}
     position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 0}
     sprinting: 0
     crouching: 0
     timeStamp: 0
-  _inputsList: []
-  _resultsList: []
+  rcvdResults:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 0}
+    sprinting: 0
+    crouching: 0
+    timeStamp: 0
+  inputsList: []
+  resultsList: []
   playerCamera: {fileID: 20213508230190850}
   playerColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!143 &143011667059871024

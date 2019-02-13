@@ -5,7 +5,6 @@ namespace Mirror.Examples.NetworkCharacterController
 {
     public class MovingPlatformComponent : NetworkBehaviour
     {
-
         [SerializeField]
         private List<Transform> Waypoints;
 
