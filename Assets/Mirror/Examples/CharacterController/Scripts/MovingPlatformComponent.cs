@@ -6,26 +6,46 @@ namespace Mirror.Examples.NetworkCharacterController
     public class MovingPlatformComponent : NetworkBehaviour
     {
         [SerializeField]
-        private List<Transform> Waypoints;
+        Vector3[] points;
 
-        private int CurrentWaypoint;
+        int CurrentWaypoint;
         private const float Speed = 3f;
 
-        private void Update()
+        Rigidbody rb;
+
+        private void Awake()
+        {
+            rb = GetComponent<Rigidbody>();
+        }
+
+        void FixedUpdate()
         {
             if (isServer)
             {
-                if (transform.position == Waypoints[CurrentWaypoint].position)
+                if (transform.position == points[CurrentWaypoint])
                 {
                     CurrentWaypoint++;
-                    if (CurrentWaypoint > Waypoints.Count - 1)
-                    {
+                    if (CurrentWaypoint > points.GetUpperBound(0))
                         CurrentWaypoint = 0;
-                    }
                 }
 
-                transform.position = Vector3.MoveTowards(transform.position, Waypoints[CurrentWaypoint].position, Time.deltaTime * Speed);
+                transform.position = Vector3.MoveTowards(transform.position, points[CurrentWaypoint], Time.deltaTime * Speed);
             }
+        }
+
+        void OnCollisionEnter(Collision collision)
+        {
+            //Debug.LogFormat("MovingPlatformComponent : OnCollisionEnter {0}", collision.gameObject);
+        }
+
+        void OnCollisionStay(Collision collision)
+        {
+            //Debug.LogFormat("MovingPlatformComponent : OnCollisionStay {0}", collision.gameObject);
+        }
+
+        void OnCollisionExit(Collision collision)
+        {
+            //Debug.LogFormat("MovingPlatformComponent : OnCollisionExit {0}", collision.gameObject);
         }
     }
 }

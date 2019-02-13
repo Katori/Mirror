@@ -33,7 +33,7 @@ namespace Mirror.Examples.NetworkCharacterController
 
         public override void OnStartLocalPlayer()
         {
-            Debug.Log("OnStartLocalPlayer");
+            //Debug.Log("OnStartLocalPlayer");
             playerCamera.gameObject.SetActive(true);
             base.OnStartLocalPlayer();
         }
