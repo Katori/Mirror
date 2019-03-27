@@ -1,18 +1,17 @@
 using UnityEngine;
 using Mirror;
-using System;
 
 public class ShootingTankBehaviour : NetworkBehaviour
 {
     [SyncVar]
     public Quaternion Rotation;
 
-    private Animator Anim;
+    private NetworkAnimator NetAnim;
 
     [ServerCallback]
     private void Start()
     {
-        Anim = GetComponent<Animator>();
+        NetAnim = GetComponent<NetworkAnimator>();
     }
 
     private void Update()
@@ -31,17 +30,17 @@ public class ShootingTankBehaviour : NetworkBehaviour
     [Server]
     private void CheckForPlayer()
     {
-        Collider[] colliders = Physics.OverlapSphere(transform.position, 4f);
+        Collider[] colliders = Physics.OverlapSphere(transform.position, 5f);
         if (colliders.Length > 0)
         {
             foreach (Collider item in colliders)
             {
-                var c = item.gameObject.GetComponent<PlayerController>();
-                if (c != null)
+                var PlayerController = item.gameObject.GetComponent<PlayerController>();
+                if (PlayerController != null)
                 {
-                    transform.LookAt(new Vector3(c.transform.position.x, transform.position.y, c.transform.position.z));
+                    transform.LookAt(new Vector3(PlayerController.transform.position.x, transform.position.y, PlayerController.transform.position.z));
                     Rotation = transform.rotation;
-                    Anim.SetTrigger("Fire");
+                    NetAnim.SetTrigger("Fire");
                 }
             }
         }
