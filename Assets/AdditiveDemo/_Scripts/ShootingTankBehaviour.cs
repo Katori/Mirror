@@ -1,51 +1,49 @@
 using UnityEngine;
 using Mirror;
+using System;
 
 public class ShootingTankBehaviour : NetworkBehaviour
 {
-    [SyncVar(hook = nameof(RotationUpdated))]
+    [SyncVar]
     public Quaternion Rotation;
 
     private Animator Anim;
 
+    [ServerCallback]
     private void Start()
+    {
+        Anim = GetComponent<Animator>();
+    }
+
+    private void Update()
     {
         if (isServer)
         {
-            Anim = GetComponent<Animator>();
-        }
-    }
-
-    private void OnEnable()
-    {
-        CheckForPlayer();
-    }
-
-    public override void OnSetLocalVisibility(bool vis)
-    {
-        base.OnSetLocalVisibility(vis);
-        if (vis)
-        {
             CheckForPlayer();
+        }
+
+        if (isClient)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Rotation, 0.3f);
         }
     }
 
     [Server]
     private void CheckForPlayer()
     {
-        if (Physics.SphereCast(transform.position, 6, transform.forward, out RaycastHit hit))
+        Collider[] colliders = Physics.OverlapSphere(transform.position, 4f);
+        if (colliders.Length > 0)
         {
-            var c = hit.collider.GetComponent<PlayerController>();
-            if (c != null)
+            foreach (Collider item in colliders)
             {
-                Rotation = transform.rotation;
-                Anim.SetTrigger("Fire");
+                var c = item.gameObject.GetComponent<PlayerController>();
+                if (c != null)
+                {
+                    transform.LookAt(new Vector3(c.transform.position.x, transform.position.y, c.transform.position.z));
+                    Rotation = transform.rotation;
+                    Anim.SetTrigger("Fire");
+                }
             }
         }
-    }
-
-    public void RotationUpdated(Quaternion NewRotation)
-    {
-        transform.rotation = NewRotation;
     }
 }
