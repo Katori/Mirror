@@ -11,10 +11,8 @@ namespace Mirror
         [SerializeField,Tooltip("You can set this programmatically to control it at runtime, but it must be set True at Start() time to initialize itself.")]
         private bool ClearTicksOnSceneChange = true;
 
-        private bool SimulationIsDirty = false;
-
         internal uint TickNumber = 0;
-        private int TicksToSimulate = 0;
+        private int TicksToSimulate = 1;
 
         private List<NetworkRigidbody> WaitingInputs = new List<NetworkRigidbody>();
 
@@ -44,29 +42,36 @@ namespace Mirror
         {
             if (ClearTicksOnSceneChange)
             {
-                TicksToSimulate = 0;
+                TicksToSimulate = 1;
             }
         }
 
         void Update()
         {
             float dt = Time.fixedDeltaTime;
-            if (SimulationIsDirty)
+            while (TicksToSimulate >= 1)
             {
-                if (WaitingInputs.Count > 0)
+                foreach (var ServerRb in ServerRigidbodiesWithMessages)
                 {
-                    foreach (var WaitingRb in WaitingInputs)
+                    if (ServerRb.ServerInputMsgs.Count > 0)
                     {
-                        WaitingRb.AuthorityPreUpdate();
+                        ServerRb.ServerPreUpdate();
                     }
-                    Physics.Simulate(dt);
-                    foreach (var WaitingRb in WaitingInputs)
-                    {
-                        WaitingRb.AuthorityPostUpdate();
-                    }
-                    ++TickNumber;
-                    WaitingInputs.Clear();
                 }
+                foreach (var WaitingRb in WaitingInputs)
+                {
+                    WaitingRb.AuthorityPreUpdate();
+                }
+                Physics.Simulate(dt);
+                foreach (var ServerRb in ServerRigidbodiesWithMessages)
+                {
+                    ServerRb.ServerPostUpdate();
+                }
+                foreach (var WaitingRb in WaitingInputs)
+                {
+                    WaitingRb.AuthorityPostUpdate();
+                }
+                TickNumber++;
 
                 if (RigidbodiesWithMessages.Count > 0)
                 {
@@ -93,48 +98,29 @@ namespace Mirror
                     RigidbodiesWithMessages.Clear();
                 }
 
-                if (ServerRigidbodiesWithMessages.Count > 0)
-                {
-                    foreach (var ServerRb in ServerRigidbodiesWithMessages)
-                    {
-                        while (ServerRb.ServerInputMsgs.Count > 0)
-                        {
-                            ServerRb.ServerPreUpdate();
-                        }
-                    }
-                    Physics.Simulate(dt);
-                    foreach (var ServerRb in ServerRigidbodiesWithMessages)
-                    {
-                        ServerRb.ServerPostUpdate();
-                    }
-                    TickNumber++;
-                    ServerRigidbodiesWithMessages.Clear();
-                }
-                SimulationIsDirty = false;
+                TicksToSimulate--;
             }
-        }
-
-        internal void MarkSimulationDirty()
-        {
-            SimulationIsDirty = true;
+            ServerRigidbodiesWithMessages.Clear();
+            WaitingInputs.Clear();
+            TicksToSimulate = 1;
         }
 
         internal void ClientHasInputs(NetworkRigidbody nrb)
         {
             WaitingInputs.Add(nrb);
-            SimulationIsDirty = true;
+            TicksToSimulate = 1;
         }
 
-        internal void RigidbodyHasMessages(NetworkRigidbody networkRigidbody)
+        internal void RigidbodyHasMessages(NetworkRigidbody networkRigidbody, int count)
         {
+            TicksToSimulate = Mathf.Max(count,TicksToSimulate);
             RigidbodiesWithMessages.Add(networkRigidbody);
-            SimulationIsDirty = true;
         }
 
-        internal void ServerRigidbodyHasMessages(NetworkRigidbody networkRigidbody)
+        internal void ServerRigidbodyHasMessages(NetworkRigidbody networkRigidbody, int count)
         {
+            TicksToSimulate = Mathf.Max(count,TicksToSimulate);
             ServerRigidbodiesWithMessages.Add(networkRigidbody);
-            SimulationIsDirty = true;
         }
     }
 }

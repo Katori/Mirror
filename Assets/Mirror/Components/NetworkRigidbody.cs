@@ -18,7 +18,6 @@ namespace Mirror
 
         public struct InputMessage
         {
-            public long delivery_time;
             public uint start_tick_number;
             public ForceStateInput[] ForceInputs;
         }
@@ -31,7 +30,6 @@ namespace Mirror
 
         public struct StateMessage
         {
-            public long delivery_time;
             public uint tick_number;
             public Vector3 position;
             public Quaternion rotation;
@@ -153,19 +151,13 @@ namespace Mirror
         [Client]
         private void ClientUpdate(float dt)
         {
-            if (ClientHasStateMessage())
-            {
-                NetworkRigidbodyManager.Instance.RigidbodyHasMessages(this);
-            }
+            NetworkRigidbodyManager.Instance.RigidbodyHasMessages(this, this.ClientStateMessages.Count);
         }
 
         [Server]
         private void ServerUpdate(float dt)
         {
-            if (ServerInputMsgs.Count > 0)
-            {
-                NetworkRigidbodyManager.Instance.ServerRigidbodyHasMessages(this);
-            }
+            NetworkRigidbodyManager.Instance.ServerRigidbodyHasMessages(this, ServerInputMsgs.Count);
         }
 
         [Server]
@@ -183,7 +175,6 @@ namespace Mirror
                 this.ServerTickAccumulator = 0;
 
                 StateMessage state_msg;
-                state_msg.delivery_time = System.DateTime.Now.ToBinary();
                 state_msg.tick_number = ServerTickNumber - (uint) this.ServerInputMsgs.Count;
                 state_msg.position = Rb.position;
                 state_msg.rotation = Rb.rotation;
@@ -209,7 +200,6 @@ namespace Mirror
         {
             // send input packet to server
             InputMessage input_msg;
-            input_msg.delivery_time = System.DateTime.Now.ToBinary();
             input_msg.start_tick_number = this.SendRedundantInputs ? this.ClientLastReceivedStateTick : NetworkRigidbodyManager.Instance.TickNumber;
             var InputBuffer = new List<ForceStateInput>();
 
@@ -225,7 +215,7 @@ namespace Mirror
         internal void ClientPreUpdate(ref uint tempRewindTick)
         {
             StateMessage state_msg = this.ClientStateMessages.Dequeue();
-            while (this.ClientHasStateMessage()) // make sure if there are any newer state messages available, we use those instead
+            while (this.ClientStateMessages.Count > 0) // make sure if there are any newer state messages available, we use those instead
             {
                 state_msg = this.ClientStateMessages.Dequeue();
             }
@@ -385,11 +375,6 @@ namespace Mirror
                     Rb.AddTorque(inputs.Torque, TorqueMode);
                 }
             }
-        }
-
-        private bool ClientHasStateMessage()
-        {
-            return this.ClientStateMessages.Count > 0 && System.DateTime.Now.ToBinary() >= this.ClientStateMessages.Peek().delivery_time;
         }
 
         private void ClientStoreCurrentStateAndStep(ref ClientState current_state, ForceStateInput inputs)
