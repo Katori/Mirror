@@ -21,7 +21,7 @@ namespace Mirror
         {
             public long delivery_time;
             public uint start_tick_number;
-            public ForceStateInput[] ForceInputs;
+            public ForceStateInput ForceInputs;
         }
 
         public struct ClientState
@@ -56,8 +56,6 @@ namespace Mirror
         public bool EnableClientCorrections = true;
         public bool EnableClientCorrectionSmoothing = true;
         public bool SendRedundantInputs = true;
-        private float ClientTimer = 0;
-        private uint ClientTickNumber = 0;
         private uint ClientLastReceivedStateTick = 0;
         private const int ClientBufferSize = 1024;
         private ClientState[] ClientStateBuffer = new ClientState[ClientBufferSize]; // client stores predicted moves here
@@ -193,10 +191,10 @@ namespace Mirror
         [Client]
         private void ClientUpdate(float dt)
         {
-            if (!Mathf.Approximately(ForceStateBuffer.Force.sqrMagnitude, 0) || !Mathf.Approximately(ForceStateBuffer.Torque.sqrMagnitude, 0))
-            {
-                NetworkRigidbodyManager.Instance.ClientHasInputs(this);
-            }
+            //if (!Mathf.Approximately(ForceStateBuffer.Force.sqrMagnitude, 0) || !Mathf.Approximately(ForceStateBuffer.Torque.sqrMagnitude, 0))
+            //{
+            //    NetworkRigidbodyManager.Instance.ClientHasInputs(this);
+            //}
 
             if (ClientHasStateMessage())
             {
@@ -227,13 +225,7 @@ namespace Mirror
             InputMessage input_msg;
             input_msg.delivery_time = System.DateTime.Now.ToBinary();
             input_msg.start_tick_number = this.SendRedundantInputs ? this.ClientLastReceivedStateTick : NetworkRigidbodyManager.Instance.TickNumber;
-            var InputBuffer = new List<ForceStateInput>();
-
-            for (uint tick = input_msg.start_tick_number; tick <= NetworkRigidbodyManager.Instance.TickNumber; ++tick)
-            {
-                InputBuffer.Add(ClientForceBuffer[tick % ClientBufferSize]);
-            }
-            input_msg.ForceInputs = InputBuffer.ToArray();
+            input_msg.ForceInputs = ClientForceBuffer[NetworkRigidbodyManager.Instance.TickNumber % ClientBufferSize];
             CmdSendInputMsg(input_msg);
             ForceStateBuffer = default;
         }
@@ -247,24 +239,29 @@ namespace Mirror
             }
         }
 
-        internal void UpdateClients(uint server_tick_number)
+        internal void UpdateClients()
         {
             if (isServer)
             {
-                StateMessage state_msg;
-                state_msg.delivery_time = System.DateTime.Now.ToBinary();
-                state_msg.tick_number = server_tick_number;
-                state_msg.position = Rb.position;
-                state_msg.rotation = Rb.rotation;
-                state_msg.velocity = Rb.velocity;
-                state_msg.angular_velocity = Rb.angularVelocity;
-                RpcSendClientState(state_msg);
+                if (ServerTickAccumulator >= ServerSnapshotRate)
+                {
+                    StateMessage state_msg;
+                    state_msg.delivery_time = System.DateTime.Now.ToBinary();
+                    state_msg.tick_number = NetworkRigidbodyManager.Instance.TickNumber;
+                    state_msg.position = Rb.position;
+                    state_msg.rotation = Rb.rotation;
+                    state_msg.velocity = Rb.velocity;
+                    state_msg.angular_velocity = Rb.angularVelocity;
+                    RpcSendClientState(state_msg);
+                    ServerTickAccumulator = 0;
+                }
             }
         }
 
-        internal void ApplyClientMotion()
+        internal void ServerProcessMessage(InputMessage input_msg)
         {
-            
+            PrePhysicsStep(input_msg.ForceInputs);
+            ServerTickAccumulator++;
         }
 
         internal void ApplyServerMotion()
@@ -284,6 +281,7 @@ namespace Mirror
                     ForceMode = (int)Mode,
                     ForceIsRelative = false
                 };
+                NetworkRigidbodyManager.Instance.ClientHasInputs(this);
             }
         }
 
@@ -297,6 +295,7 @@ namespace Mirror
                     ForceMode = (int)Mode,
                     ForceIsRelative = true
                 };
+                NetworkRigidbodyManager.Instance.ClientHasInputs(this);
             }
         }
 
@@ -310,6 +309,7 @@ namespace Mirror
                     TorqueMode = (int)Mode,
                     TorqueIsRelative = false
                 };
+                NetworkRigidbodyManager.Instance.ClientHasInputs(this);
             }
         }
 
@@ -323,6 +323,7 @@ namespace Mirror
                     TorqueMode = (int)Mode,
                     TorqueIsRelative = true
                 };
+                NetworkRigidbodyManager.Instance.ClientHasInputs(this);
             }
         }
 

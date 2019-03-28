@@ -14,13 +14,7 @@ namespace Mirror
         private bool SimulationIsDirty = false;
 
         internal uint TickNumber = 0;
-        private uint ServerTickAccumulator = 0;
         private uint TicksToSimulate = 0;
-
-        private Dictionary<uint, List<NetworkRigidbody>> DirtyClientTicksToSimulate = new Dictionary<uint, List<NetworkRigidbody>>();
-
-        private Dictionary<uint, List<NetworkRigidbody>> DirtyServerTicksToSimulate = new Dictionary<uint, List<NetworkRigidbody>>();
-        private uint ServerSnapshotRate;
 
         private List<NetworkRigidbody> WaitingInputs = new List<NetworkRigidbody>();
 
@@ -94,29 +88,32 @@ namespace Mirror
                         ++RewindTick;
                     }
                 }
+                RigidbodiesWithMessages.Clear();
             }
 
             if (ServerRigidbodiesWithMessages.Count > 0)
             {
-                // foreach server rigidbody with messages
-                Dictionary<NetworkRigidbody, List<NetworkRigidbody.InputMessage>> Messages = new Dictionary<NetworkRigidbody, List<NetworkRigidbody.InputMessage>>();
-
-                foreach (var item in Messages)
+                foreach (var item in ServerRigidbodiesWithMessages)
                 {
-
+                    while (item.ServerInputMsgs.Count > 0)
+                    {
+                        var c = item.ServerInputMsgs.Dequeue();
+                        item.ServerProcessMessage(c);
+                    }
                 }
-                // pull 
+                Physics.Simulate(dt);
+                TickNumber++;
+                foreach (var item in ServerRigidbodiesWithMessages)
+                {
+                    item.UpdateClients();
+                }
+                ServerRigidbodiesWithMessages.Clear();
             }
         }
 
         internal void ClientHasInputs(NetworkRigidbody nrb)
         {
             WaitingInputs.Add(nrb);
-        }
-
-        internal void ServerDirtyTick(NetworkRigidbody networkRigidbody)
-        {
-            
         }
 
         internal void RigidbodyHasMessages(NetworkRigidbody networkRigidbody)
