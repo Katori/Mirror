@@ -89,34 +89,34 @@ namespace Mirror
 
             if (ServerMode)
             {
-                while (ServerRbsWithTicksToSim.Count > 0)
+                // should this be a while? original logic was a while
+                if (ServerRbsWithTicksToSim.Count > 0)
                 {
                     var CurrentTick = ServerRbsWithTicksToSim.Values.Min(x => x.Min(y => y.Key));
-                    var c = ServerRbsWithTicksToSim.Where(x => x.Value.ContainsKey(CurrentTick)).ToArray();
-                    var p = c.Max(x => x.Value.Max(y => y.Value.ForceInputs.Length));
+                    var RigidbodiesWithCurrentTickInfo = ServerRbsWithTicksToSim.Where(x => x.Value.ContainsKey(CurrentTick)).ToArray();
+                    var MaximumInputLength = RigidbodiesWithCurrentTickInfo.Max(x => x.Value.Max(y => y.Value.ForceInputs.Length));
 
-                    var maxTick = CurrentTick + (uint)p - 1;
+                    var maxTick = CurrentTick + (uint)MaximumInputLength - 1;
                     if (maxTick >= ServerTickNumber)
                     {
                         uint start_i = ServerTickNumber > CurrentTick ? (ServerTickNumber - CurrentTick) : 0;
-                        for (int i = (int)start_i; i < p; ++i)
+                        for (int i = (int)start_i; i < MaximumInputLength; ++i)
                         {
-                            foreach (var item in c)
+                            foreach (var item in RigidbodiesWithCurrentTickInfo)
                             {
                                 if (item.Value[CurrentTick].ForceInputs.Length > i)
                                 {
                                     item.Key.ServerPreUpdate(item.Value[CurrentTick].ForceInputs[i]);
                                 }
-                                //var b = item.Value[CurrentTick];
                             }
                             Physics.Simulate(Time.fixedDeltaTime);
                             ++ServerTickNumber;
-                            foreach (var item in c)
+                            foreach (var item in RigidbodiesWithCurrentTickInfo)
                             {
                                 item.Key.ServerPostUpdate(ServerTickNumber, CurrentTick);
                             }
                         }
-                        foreach (var item in c)
+                        foreach (var item in RigidbodiesWithCurrentTickInfo)
                         {
                             ServerTickSimFinished(item.Key, CurrentTick);
                         }
