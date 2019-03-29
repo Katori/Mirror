@@ -91,7 +91,7 @@ namespace Mirror
             {
                 while (ServerRbsWithTicksToSim.Count > 0)
                 {
-                    var CurrentTick = ServerRbsWithTicksToSim.Values.Max(x => x.Max(y => y.Key));
+                    var CurrentTick = ServerRbsWithTicksToSim.Values.Min(x => x.Min(y => y.Key));
                     var c = ServerRbsWithTicksToSim.Where(x => x.Value.ContainsKey(CurrentTick)).ToArray();
                     var p = c.Max(x => x.Value.Max(y => y.Value.ForceInputs.Length));
 
