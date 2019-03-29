@@ -202,7 +202,6 @@ namespace Mirror
                 state_msg.angular_velocity = Rb.angularVelocity;
                 CurrentState = state_msg;
             }
-            NetworkRigidbodyManager.Instance.ServerTickSimFinished(this, currentTick);
         }
 
         internal void ServerPreUpdate(ForceStateInput forceStateInput)

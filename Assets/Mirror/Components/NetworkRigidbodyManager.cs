@@ -116,6 +116,10 @@ namespace Mirror
                                 item.Key.ServerPostUpdate(ServerTickNumber, CurrentTick);
                             }
                         }
+                        foreach (var item in c)
+                        {
+                            ServerTickSimFinished(item.Key, CurrentTick);
+                        }
                     }
                 }
             }
@@ -149,7 +153,7 @@ namespace Mirror
             }
         }
 
-        internal void ServerTickSimFinished(NetworkRigidbody networkRigidbodySyncVar, uint currentTick)
+        private void ServerTickSimFinished(NetworkRigidbody networkRigidbodySyncVar, uint currentTick)
         {
             ServerRbsWithTicksToSim[networkRigidbodySyncVar].Remove(currentTick);
             if (ServerRbsWithTicksToSim[networkRigidbodySyncVar].Count == 0)
