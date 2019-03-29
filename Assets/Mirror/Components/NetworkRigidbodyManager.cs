@@ -92,9 +92,9 @@ namespace Mirror
                 // should this be a while? original logic was a while
                 if (ServerRbsWithTicksToSim.Count > 0)
                 {
-                    var CurrentTick = ServerRbsWithTicksToSim.Values.Min(x => x.Min(y => y.Key));
-                    var RigidbodiesWithCurrentTickInfo = ServerRbsWithTicksToSim.Where(x => x.Value.ContainsKey(CurrentTick)).ToArray();
-                    var MaximumInputLength = RigidbodiesWithCurrentTickInfo.Max(x => x.Value.Max(y => y.Value.ForceInputs.Length));
+                    uint CurrentTick = ServerRbsWithTicksToSim.Values.Min(x => x.Min(y => y.Key));
+                    KeyValuePair<NetworkRigidbody, Dictionary<uint, NetworkRigidbody.InputMessage>>[] RigidbodiesWithCurrentTickInfo = ServerRbsWithTicksToSim.Where(x => x.Value.ContainsKey(CurrentTick)).ToArray();
+                    int MaximumInputLength = RigidbodiesWithCurrentTickInfo.Max(x => x.Value.Max(y => y.Value.ForceInputs.Length));
 
                     var maxTick = CurrentTick + (uint)MaximumInputLength - 1;
                     if (maxTick >= ServerTickNumber)
