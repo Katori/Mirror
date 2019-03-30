@@ -267,24 +267,30 @@ namespace Mirror
             ClientLastReceivedStateTick = CurrentState.tick_number;
 
             uint buffer_slot = CurrentState.tick_number % ClientBufferSize;
-            Vector3 position_error = CurrentState.position - this.ClientStateBuffer[buffer_slot].position;
-            float rotation_error = 1.0f - Quaternion.Dot(CurrentState.rotation, this.ClientStateBuffer[buffer_slot].rotation);
-
-            if (position_error.sqrMagnitude > 0.0000001f ||
-                rotation_error > 0.00001f)
+            if (ClientStateBuffer.Length > buffer_slot)
             {
-                // capture the current predicted pos for smoothing
-                prev_pos = Rb.position + ClientPosError;
-                prev_rot = Rb.rotation * ClientRotError;
+                Vector3 position_error = CurrentState.position - this.ClientStateBuffer[buffer_slot].position;
+                float rotation_error = 1.0f - Quaternion.Dot(CurrentState.rotation, this.ClientStateBuffer[buffer_slot].rotation);
 
-                // rewind & replay
-                Rb.position = CurrentState.position;
-                Rb.rotation = CurrentState.rotation;
-                Rb.velocity = CurrentState.velocity;
-                Rb.angularVelocity = CurrentState.angular_velocity;
+                if (position_error.sqrMagnitude > 0.0000001f ||
+                    rotation_error > 0.00001f)
+                {
+                    if (Rb != null)
+                    {
+                        // capture the current predicted pos for smoothing
+                        prev_pos = Rb.position + ClientPosError;
+                        prev_rot = Rb.rotation * ClientRotError;
 
-                uint rewind_tick_number = CurrentState.tick_number;
-                NetworkRigidbodyManager.Instance.PrepareRewind(this, rewind_tick_number);
+                        // rewind & replay
+                        Rb.position = CurrentState.position;
+                        Rb.rotation = CurrentState.rotation;
+                        Rb.velocity = CurrentState.velocity;
+                        Rb.angularVelocity = CurrentState.angular_velocity;
+
+                        uint rewind_tick_number = CurrentState.tick_number;
+                        NetworkRigidbodyManager.Instance.PrepareRewind(this, rewind_tick_number);
+                    }
+                }
             }
         }
 
