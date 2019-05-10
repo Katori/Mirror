@@ -7,9 +7,6 @@ namespace Mirror.PongPlusPlus
     {
         internal static GameManagerComponent Instance { get; private set; }
 
-        [SerializeField]
-        private Transform SceneCamera;
-
         [SyncVar(hook =nameof(Team1ScoreUpdated))]
         public int Team1Score;
 
@@ -45,15 +42,16 @@ namespace Mirror.PongPlusPlus
 
         private bool TrackPlayer;
 
-        internal void EnableSceneCamera()
-        {
-            SceneCamera.gameObject.SetActive(true);
-        }
-
         private Transform PlayerTransform;
         private bool GameStarted;
 
-        void Start()
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            SetInstance();
+        }
+
+        private void SetInstance()
         {
             if (Instance == null)
             {
@@ -68,7 +66,7 @@ namespace Mirror.PongPlusPlus
         public override void OnStartServer()
         {
             base.OnStartServer();
-            Debug.Log("Started GameMan");
+            SetInstance();
         }
 
         [Server]
@@ -84,11 +82,6 @@ namespace Mirror.PongPlusPlus
             {
                 Team2Score++;
             }
-        }
-
-        internal void DisableSceneCamera()
-        {
-            SceneCamera.gameObject.SetActive(false);
         }
 
         [Server]

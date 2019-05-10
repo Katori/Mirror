@@ -1,14 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Mirror.PongPlusPlus
 {
     class PongPlusPlusNetworkManager : NetworkManager
     {
+        [SerializeField]
+        private GameObject SceneCamera;
+
+        internal void DisableSceneCamera()
+        {
+            SceneCamera.SetActive(false);
+        }
+
+        internal void EnableSceneCamera()
+        {
+            SceneCamera.SetActive(true);
+        }
+
         public override void OnServerAddPlayer(NetworkConnection conn, AddPlayerMessage extraMessage)
         {
             GameManagerComponent.Instance.AddPlayer(conn, playerPrefab);
@@ -23,13 +31,13 @@ namespace Mirror.PongPlusPlus
         public override void OnStopClient()
         {
             base.OnStopClient();
-            GameManagerComponent.Instance.EnableSceneCamera();
+            EnableSceneCamera();
         }
 
         public override void OnStopHost()
         {
             base.OnStopHost();
-            GameManagerComponent.Instance.EnableSceneCamera();
+            EnableSceneCamera();
         }
     }
 }

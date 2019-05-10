@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Mirror.PongPlusPlus
@@ -24,8 +25,17 @@ namespace Mirror.PongPlusPlus
             UIControllerComponent.Instance.PlayerScoreUpdated(newScore);
         }
 
-        [SyncVar]
+        [SyncVar(hook =nameof(ServeEnableChanged))]
         public bool CanServe;
+
+        private void ServeEnableChanged(bool NewServe)
+        {
+            if (NewServe)
+            {
+                UIControllerComponent.Instance.ActivateServePanel();
+            }
+        }
+
         private const float ServeSpeed = 3f;
         private const float Speed = 3f;
 
@@ -38,7 +48,11 @@ namespace Mirror.PongPlusPlus
         {
             base.OnStartLocalPlayer();
             MeshRenderer.material = LocalPlayerMaterial;
-            GameManagerComponent.Instance.DisableSceneCamera();
+            FindObjectOfType<PongPlusPlusNetworkManager>().DisableSceneCamera();
+            if (CanServe)
+            {
+                UIControllerComponent.Instance.ActivateServePanel();
+            }
         }
 
         private void Update()

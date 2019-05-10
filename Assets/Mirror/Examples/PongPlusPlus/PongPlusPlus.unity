@@ -587,8 +587,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_Children:
-  - {fileID: 1605653253}
   - {fileID: 1621538972}
+  - {fileID: 1605653253}
   m_Father: {fileID: 0}
   m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -920,7 +920,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1605653253
 RectTransform:
   m_ObjectHideFlags: 0
@@ -934,7 +934,7 @@ RectTransform:
   m_Children:
   - {fileID: 352175357}
   m_Father: {fileID: 977883698}
-  m_RootOrder: 0
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
@@ -1021,7 +1021,7 @@ RectTransform:
   m_Children:
   - {fileID: 1597839696}
   m_Father: {fileID: 977883698}
-  m_RootOrder: 1
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
@@ -1195,6 +1195,7 @@ MonoBehaviour:
   playerSpawnMethod: 0
   spawnPrefabs:
   - {fileID: 2368747985407125167, guid: 8a1e7ff9ada54354ea549d0b69878695, type: 3}
+  SceneCamera: {fileID: 7817536}
 --- !u!1 &1837271982
 GameObject:
   m_ObjectHideFlags: 0
@@ -1318,7 +1319,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   syncInterval: 0
-  SceneCamera: {fileID: 7817539}
   Team1Score: 0
   Team2Score: 0
   Team1Spawn: {fileID: 1457639341}
