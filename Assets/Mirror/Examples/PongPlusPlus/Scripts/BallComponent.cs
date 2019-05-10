@@ -7,6 +7,7 @@ namespace Mirror.PongPlusPlus
         [SerializeField]
         internal Rigidbody Rb;
 
+        [SerializeField]
         internal GameObject playerKicked;
 
         [ServerCallback]
@@ -14,7 +15,7 @@ namespace Mirror.PongPlusPlus
         {
             if (other.tag == "Player")
             {
-                playerKicked = other.gameObject;
+                playerKicked = other.transform.parent.gameObject;
             }
         }
     }

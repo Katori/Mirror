@@ -12,8 +12,9 @@ namespace Mirror.PongPlusPlus
         {
             if (other.tag == "Ball")
             {
-                var c = other.GetComponent<BallComponent>();
+                var c = other.GetComponentInParent<BallComponent>();
                 GameManagerComponent.Instance.Score(c.playerKicked, Team);
+                NetworkServer.Destroy(other.transform.parent.gameObject);
             }
         }
     }

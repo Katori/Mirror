@@ -17,7 +17,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1396064733
 Transform:
   m_ObjectHideFlags: 0
@@ -192,11 +192,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3be32778965230848bec1a0c690e2eab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  syncInterval: 0.1
+  syncInterval: 0
   MeshRenderer: {fileID: 1040774922234474874}
   LocalPlayerMaterial: {fileID: 2100000, guid: fbcc6bae285390a4c8e4b4518ac51bde, type: 2}
   Rb: {fileID: 1564424184}
+  Camera: {fileID: 1396064730}
+  BallPrefab: {fileID: 15, guid: 8a1e7ff9ada54354ea549d0b69878695, type: 3}
   Team: 0
+  Score: 0
+  CanServe: 0
 --- !u!114 &1040774922234474869
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -211,8 +215,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serverOnly: 0
   localPlayerAuthority: 0
-  m_AssetId: 
-  m_SceneId: 1874048661
+  m_AssetId: 4c02722733b66124e9092cebeaccdcc5
+  m_SceneId: 0
 --- !u!54 &1564424184
 Rigidbody:
   m_ObjectHideFlags: 0

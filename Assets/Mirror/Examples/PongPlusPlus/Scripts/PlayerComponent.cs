@@ -14,6 +14,12 @@ namespace Mirror.PongPlusPlus
         [SerializeField]
         private Rigidbody Rb;
 
+        [SerializeField]
+        private GameObject Camera;
+
+        [SerializeField]
+        private GameObject BallPrefab;
+
         [SyncVar]
         public int Team;
 
@@ -34,9 +40,13 @@ namespace Mirror.PongPlusPlus
             {
                 UIControllerComponent.Instance.ActivateServePanel();
             }
+            else
+            {
+                UIControllerComponent.Instance.DeactivateServePanel();
+            }
         }
 
-        private const float ServeSpeed = 3f;
+        private const float ServeSpeed = 250f;
         private const float Speed = 3f;
 
         public override void OnStartClient()
@@ -49,6 +59,7 @@ namespace Mirror.PongPlusPlus
             base.OnStartLocalPlayer();
             MeshRenderer.material = LocalPlayerMaterial;
             FindObjectOfType<PongPlusPlusNetworkManager>().DisableSceneCamera();
+            Camera.SetActive(true);
             if (CanServe)
             {
                 UIControllerComponent.Instance.ActivateServePanel();
@@ -68,7 +79,7 @@ namespace Mirror.PongPlusPlus
                     CmdMove(transform.up);
                 }
 
-                if (CanServe)
+                if (CanServe && Input.GetKey(KeyCode.Space))
                 {
                     CmdServeBall();
                 }
@@ -80,7 +91,11 @@ namespace Mirror.PongPlusPlus
         {
             if (CanServe)
             {
-                FindObjectOfType<BallComponent>().Rb.AddForce(transform.forward * ServeSpeed);
+                var ball = Instantiate(BallPrefab, transform.position + transform.forward, Quaternion.identity);
+                NetworkServer.Spawn(ball);
+                var ballComponent = ball.GetComponent<BallComponent>();
+                ballComponent.playerKicked = gameObject;
+                ballComponent.Rb.AddForce(transform.forward * ServeSpeed);
                 CanServe = false;
             }
         }

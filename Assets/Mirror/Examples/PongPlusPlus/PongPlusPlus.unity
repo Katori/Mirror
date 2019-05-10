@@ -611,7 +611,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ScoreText: {fileID: 1597839697}
   ServePanel: {fileID: 1605653252}
-  ServePanelGroup: {fileID: 1605653256}
 --- !u!1 &1083192522
 GameObject:
   m_ObjectHideFlags: 0
@@ -787,6 +786,10 @@ PrefabInstance:
       propertyPath: Team
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1057557583, guid: 241dd2692b1d7c4408ce0b34f3a6d5f4, type: 3}
+      propertyPath: BallSpawnPoint
+      value: 
+      objectReference: {fileID: 2368747986710406548}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 241dd2692b1d7c4408ce0b34f3a6d5f4, type: 3}
 --- !u!1 &1457639339
@@ -1194,7 +1197,7 @@ MonoBehaviour:
   autoCreatePlayer: 1
   playerSpawnMethod: 0
   spawnPrefabs:
-  - {fileID: 2368747985407125167, guid: 8a1e7ff9ada54354ea549d0b69878695, type: 3}
+  - {fileID: 15, guid: 8a1e7ff9ada54354ea549d0b69878695, type: 3}
   SceneCamera: {fileID: 7817536}
 --- !u!1 &1837271982
 GameObject:

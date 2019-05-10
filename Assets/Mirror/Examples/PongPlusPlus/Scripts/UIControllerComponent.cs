@@ -14,12 +14,6 @@ public class UIControllerComponent : MonoBehaviour
     [SerializeField]
     private GameObject ServePanel;
 
-    [SerializeField]
-    private CanvasGroup ServePanelGroup;
-
-    private bool ServePanelFadeActive = false;
-    private float ServePanelFadeTimer;
-
     private int Team1Score;
 
     internal void PlayerScoreUpdated(int newScore)
@@ -55,30 +49,13 @@ public class UIControllerComponent : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (ServePanelFadeActive)
-        {
-            ServePanelFadeTimer -= Time.deltaTime;
-            if (ServePanelFadeTimer <= 0)
-            {
-                ServePanel.SetActive(false);
-                ServePanelFadeActive = false;
-                return;
-            }
-            ServePanelGroup.alpha -= Time.deltaTime;
-        }
-    }
-
     internal void ActivateServePanel()
     {
         ServePanel.SetActive(true);
-        ServePanelGroup.alpha = 1f;
     }
 
     internal void DeactivateServePanel()
     {
-        ServePanelFadeTimer = 2f;
-        ServePanelFadeActive = true;
+        ServePanel.SetActive(false);
     }
 }
