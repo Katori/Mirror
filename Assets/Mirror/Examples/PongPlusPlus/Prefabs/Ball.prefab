@@ -143,7 +143,7 @@ SphereCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 15}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 00b6bf2d7afc1254383329c5731eefb3, type: 2}
   m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -179,8 +179,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serverOnly: 0
   localPlayerAuthority: 0
-  m_AssetId: 
-  m_SceneId: 3313783474
+  m_AssetId: 8a1e7ff9ada54354ea549d0b69878695
+  m_SceneId: 0
 --- !u!114 &37
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -209,3 +209,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncInterval: 0.1
   Rb: {fileID: 30}
+  playerKicked: {fileID: 0}

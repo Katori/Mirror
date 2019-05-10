@@ -28,7 +28,10 @@ namespace Mirror.PongPlusPlus
 
         public void ScoreUpdated(int newScore)
         {
-            UIControllerComponent.Instance.PlayerScoreUpdated(newScore);
+            if (isLocalPlayer)
+            {
+                UIControllerComponent.Instance.PlayerScoreUpdated(newScore);
+            }
         }
 
         [SyncVar(hook =nameof(ServeEnableChanged))]
@@ -36,13 +39,16 @@ namespace Mirror.PongPlusPlus
 
         private void ServeEnableChanged(bool NewServe)
         {
-            if (NewServe)
+            if (isLocalPlayer)
             {
-                UIControllerComponent.Instance.ActivateServePanel();
-            }
-            else
-            {
-                UIControllerComponent.Instance.DeactivateServePanel();
+                if (NewServe)
+                {
+                    UIControllerComponent.Instance.ActivateServePanel();
+                }
+                else
+                {
+                    UIControllerComponent.Instance.DeactivateServePanel();
+                }
             }
         }
 

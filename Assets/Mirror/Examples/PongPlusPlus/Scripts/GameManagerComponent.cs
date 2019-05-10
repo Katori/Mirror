@@ -29,9 +29,6 @@ namespace Mirror.PongPlusPlus
         [SerializeField]
         private Transform Team2Spawn;
 
-        [SerializeField]
-        private GameObject Ball;
-
         public SyncDictGameObjectInt PlayersAndIndividualScores = new SyncDictGameObjectInt();
 
         public class SyncDictGameObjectInt : SyncDictionary<GameObject, Player> { }
@@ -64,7 +61,7 @@ namespace Mirror.PongPlusPlus
             {
                 Instance = this;
             }
-            else
+            else if(Instance!=this)
             {
                 Destroy(gameObject);
             }
@@ -86,12 +83,12 @@ namespace Mirror.PongPlusPlus
             if (Team == 0)
             {
                 Team1Score++;
-                GenerateServe(1);
+                GenerateServe(0);
             }
             else
             {
                 Team2Score++;
-                GenerateServe(0);
+                GenerateServe(1);
             }
         }
 
