@@ -26,6 +26,12 @@ namespace Mirror.PongPlusPlus
         [SerializeField]
         private Transform Team1Spawn;
 
+        [Server]
+        internal void BallOut()
+        {
+            GenerateServe(Random.Range(0, 2));
+        }
+
         [SerializeField]
         private Transform Team2Spawn;
 

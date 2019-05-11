@@ -20,6 +20,7 @@ namespace Mirror.PongPlusPlus
                 }
                 else
                 {
+                    GameManagerComponent.Instance.BallOut();
                     NetworkServer.Destroy(other.transform.parent.gameObject);
                 }
             }
