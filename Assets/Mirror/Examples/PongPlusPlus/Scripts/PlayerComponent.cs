@@ -22,6 +22,9 @@ namespace Mirror.PongPlusPlus
         [SerializeField]
         private GameObject BallPrefab = default;
 
+        [SerializeField]
+        private AudioSource SoundSource;
+
         #endregion
 
         #region SyncVars
@@ -128,6 +131,7 @@ namespace Mirror.PongPlusPlus
                 var ballComponent = ball.GetComponent<BallComponent>();
                 ballComponent.playerKicked = gameObject;
                 ballComponent.Rb.AddForce(transform.forward * ServeSpeed);
+                Invoke(nameof(BallServeSound), 0.1f);
                 CanServe = false;
             }
         }
@@ -136,6 +140,36 @@ namespace Mirror.PongPlusPlus
         public void CmdMove(Vector3 vector3)
         {
             Rb.MovePosition(Rb.position + vector3*Time.deltaTime*Speed);
+        }
+
+        #endregion
+
+        #region Client RPCs
+
+        [ClientRpc]
+        public void RpcPlayScoreSound()
+        {
+            SoundSource.Play();
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        [Server]
+        private void BallServeSound()
+        {
+            FindObjectOfType<BallComponent>().BallServed();
+        }
+
+        #endregion
+
+        #region Internal Methods
+
+        [Server]
+        internal void PlayScoreSound()
+        {
+            RpcPlayScoreSound();
         }
 
         #endregion

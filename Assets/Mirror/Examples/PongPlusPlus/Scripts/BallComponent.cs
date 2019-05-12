@@ -8,7 +8,58 @@ namespace Mirror.PongPlusPlus
         internal Rigidbody Rb = default;
 
         [SerializeField]
+        private AudioSource SoundSource;
+
+        [SerializeField]
+        private AudioClip ServeSound;
+
+        [SerializeField]
+        private AudioClip HitSound;
+
         internal GameObject playerKicked = default;
+
+        private void PlayAudioClip(AudioClip clip)
+        {
+            SoundSource.clip = clip;
+            SoundSource.Play();
+        }
+
+        [ClientRpc]
+        public void RpcPlayHitSound()
+        {
+            PlayAudioClip(HitSound);
+        }
+
+        [ClientRpc]
+        public void RpcPlayServeSound()
+        {
+            PlayAudioClip(ServeSound);
+        }
+
+        [Server]
+        internal void BallServed()
+        {
+            RpcPlayServeSound();
+        }
+
+        [ServerCallback]
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision.relativeVelocity.sqrMagnitude > 0.5)
+            {
+                RpcPlayHitSound();
+            }
+        }
+
+        [ServerCallback]
+        private void LateUpdate()
+        {
+            if (Rb.velocity.sqrMagnitude < 0.5f)
+            {
+                GameManagerComponent.Instance.BallOut();
+                NetworkServer.Destroy(gameObject);
+            }
+        }
 
         [ServerCallback]
         private void OnTriggerEnter(Collider other)

@@ -101,10 +101,12 @@ namespace Mirror.PongPlusPlus
         [Server]
         internal void Score(GameObject player, int Team)
         {
-            var c = PlayersAndIndividualScores[player];
-            c.Score++;
-            PlayersAndIndividualScores[player] = c;
-            player.GetComponent<PlayerComponent>().Score++;
+            var ScoredPlayer = PlayersAndIndividualScores[player];
+            ScoredPlayer.Score++;
+            PlayersAndIndividualScores[player] = ScoredPlayer;
+            var scoredPlayerComponent = player.GetComponent<PlayerComponent>();
+            scoredPlayerComponent.Score++;
+            scoredPlayerComponent.PlayScoreSound();
             if (Team == 0)
             {
                 Team1Score++;
