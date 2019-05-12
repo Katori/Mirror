@@ -9,33 +9,14 @@ public class UIControllerComponent : MonoBehaviour
     internal static UIControllerComponent Instance { get; private set; }
 
     [SerializeField]
-    private Text ScoreText;
+    private Text ScoreText = default;
 
     [SerializeField]
-    private GameObject ServePanel;
+    private GameObject ServePanel = default;
 
     private int Team1Score;
-
-    internal void PlayerScoreUpdated(int newScore)
-    {
-        PlayerScore = newScore;
-        ScoreText.text = "Team 1: " + Team1Score + "\nTeam 2: " + Team2Score + "\nPersonal: " + PlayerScore;
-    }
-
     private int Team2Score;
     private int PlayerScore;
-
-    internal void UpdateTeam1Score(int newScore)
-    {
-        Team1Score = newScore;
-        ScoreText.text = "Team 1: " + Team1Score + "\nTeam 2: " + Team2Score + "\nPersonal: " + PlayerScore;
-    }
-
-    internal void UpdateTeam2Score(int newScore)
-    {
-        Team2Score = newScore;
-        ScoreText.text = "Team 1: " + Team1Score + "\nTeam 2: " + Team2Score + "\nPersonal: " + PlayerScore;
-    }
 
     private void Start()
     {
@@ -57,5 +38,23 @@ public class UIControllerComponent : MonoBehaviour
     internal void DeactivateServePanel()
     {
         ServePanel.SetActive(false);
+    }
+
+    internal void PlayerScoreUpdated(int newScore)
+    {
+        PlayerScore = newScore;
+        ScoreText.text = "Team 1: " + Team1Score + "\nTeam 2: " + Team2Score + "\nPersonal: " + PlayerScore;
+    }
+
+    internal void UpdateTeam1Score(int newScore)
+    {
+        Team1Score = newScore;
+        ScoreText.text = "Team 1: " + Team1Score + "\nTeam 2: " + Team2Score + "\nPersonal: " + PlayerScore;
+    }
+
+    internal void UpdateTeam2Score(int newScore)
+    {
+        Team2Score = newScore;
+        ScoreText.text = "Team 1: " + Team1Score + "\nTeam 2: " + Team2Score + "\nPersonal: " + PlayerScore;
     }
 }

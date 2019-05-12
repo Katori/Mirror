@@ -5,26 +5,46 @@ namespace Mirror.PongPlusPlus
 {
     public class PlayerComponent : NetworkBehaviour
     {
-        [SerializeField]
-        private Renderer MeshRenderer;
+        #region Inspector Links
 
         [SerializeField]
-        private Material LocalPlayerMaterial;
+        private Renderer MeshRenderer = default;
 
         [SerializeField]
-        private Rigidbody Rb;
+        private Material LocalPlayerMaterial = default;
 
         [SerializeField]
-        private GameObject Camera;
+        private Rigidbody Rb = default;
 
         [SerializeField]
-        private GameObject BallPrefab;
+        private GameObject Camera = default;
+
+        [SerializeField]
+        private GameObject BallPrefab = default;
+
+        #endregion
+
+        #region SyncVars
 
         [SyncVar]
         public int Team;
 
         [SyncVar(hook =nameof(ScoreUpdated))]
         public int Score;
+
+        [SyncVar(hook = nameof(ServeEnableChanged))]
+        public bool CanServe;
+
+        #endregion
+
+        #region Constants
+
+        private const float ServeSpeed = 250f;
+        private const float Speed = 3f;
+
+        #endregion
+
+        #region SyncVar Hooks
 
         public void ScoreUpdated(int newScore)
         {
@@ -34,10 +54,7 @@ namespace Mirror.PongPlusPlus
             }
         }
 
-        [SyncVar(hook =nameof(ServeEnableChanged))]
-        public bool CanServe;
-
-        private void ServeEnableChanged(bool NewServe)
+        public void ServeEnableChanged(bool NewServe)
         {
             if (isLocalPlayer)
             {
@@ -52,8 +69,9 @@ namespace Mirror.PongPlusPlus
             }
         }
 
-        private const float ServeSpeed = 250f;
-        private const float Speed = 3f;
+        #endregion
+
+        #region Mirror Callbacks
 
         public override void OnStartClient()
         {
@@ -71,6 +89,10 @@ namespace Mirror.PongPlusPlus
                 UIControllerComponent.Instance.ActivateServePanel();
             }
         }
+
+        #endregion
+
+        #region Unity Callbacks
 
         private void Update()
         {
@@ -92,6 +114,10 @@ namespace Mirror.PongPlusPlus
             }
         }
 
+        #endregion
+
+        #region Commands
+
         [Command]
         public void CmdServeBall()
         {
@@ -111,5 +137,7 @@ namespace Mirror.PongPlusPlus
         {
             Rb.MovePosition(Rb.position + vector3*Time.deltaTime*Speed);
         }
+
+        #endregion
     }
 }

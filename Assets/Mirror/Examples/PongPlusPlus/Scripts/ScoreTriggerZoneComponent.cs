@@ -5,7 +5,7 @@ namespace Mirror.PongPlusPlus
     class ScoreTriggerZoneComponent: NetworkBehaviour
     {
         [SerializeField]
-        private int Team;
+        private int Team = default;
 
         [ServerCallback]
         private void OnTriggerEnter(Collider other)

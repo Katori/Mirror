@@ -5,7 +5,7 @@ namespace Mirror.PongPlusPlus
     class PongPlusPlusNetworkManager : NetworkManager
     {
         [SerializeField]
-        private GameObject SceneCamera;
+        private GameObject SceneCamera = default;
 
         internal void DisableSceneCamera()
         {

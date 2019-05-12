@@ -7,8 +7,82 @@ namespace Mirror.PongPlusPlus
     {
         internal static GameManagerComponent Instance { get; private set; }
 
+        #region SyncVars
+
         [SyncVar(hook =nameof(Team1ScoreUpdated))]
         public int Team1Score;
+
+        [SyncVar(hook = nameof(Team2ScoreUpdated))]
+        public int Team2Score;
+
+        #endregion
+
+        #region Inspector Links
+
+        [SerializeField]
+        private Transform Team1Spawn = default;
+
+        [SerializeField]
+        private Transform Team2Spawn = default;
+
+        #endregion
+
+        #region SyncObjects
+
+        public SyncDictGameObjectInt PlayersAndIndividualScores = new SyncDictGameObjectInt();
+
+        public class SyncDictGameObjectInt : SyncDictionary<GameObject, Player> { }
+
+        #endregion
+
+        #region Private Variables
+
+        private Rigidbody BallRb;
+
+        private Vector3 Offset = new Vector3(0, 2.73f, -3.44f);
+
+        private bool TrackPlayer;
+
+        private Transform PlayerTransform;
+        private bool GameStarted;
+
+        private int LastTeamSpawned = 1;
+
+        #endregion
+
+        #region Mirror Callbacks
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            SetInstance();
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+            SetInstance();
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void SetInstance()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else if (Instance != this)
+            {
+                Destroy(gameObject);
+            }
+        }
+
+        #endregion
+
+        #region SyncVar Hooks
 
         public void Team1ScoreUpdated(int NewScore)
         {
@@ -20,64 +94,9 @@ namespace Mirror.PongPlusPlus
             UIControllerComponent.Instance.UpdateTeam2Score(NewScore);
         }
 
-        [SyncVar(hook = nameof(Team2ScoreUpdated))]
-        public int Team2Score;
+        #endregion
 
-        [SerializeField]
-        private Transform Team1Spawn;
-
-        [Server]
-        internal void BallOut()
-        {
-            GenerateServe(Random.Range(0, 2));
-        }
-
-        [SerializeField]
-        private Transform Team2Spawn;
-
-        public SyncDictGameObjectInt PlayersAndIndividualScores = new SyncDictGameObjectInt();
-
-        public class SyncDictGameObjectInt : SyncDictionary<GameObject, Player> { }
-
-        [System.Serializable]
-        public struct Player
-        {
-            public int Score;
-            public int Team;
-        }
-
-        private Rigidbody BallRb;
-
-        private Vector3 Offset = new Vector3(0, 2.73f, -3.44f);
-
-        private bool TrackPlayer;
-
-        private Transform PlayerTransform;
-        private bool GameStarted;
-
-        public override void OnStartClient()
-        {
-            base.OnStartClient();
-            SetInstance();
-        }
-
-        private void SetInstance()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else if(Instance!=this)
-            {
-                Destroy(gameObject);
-            }
-        }
-
-        public override void OnStartServer()
-        {
-            base.OnStartServer();
-            SetInstance();
-        }
+        #region Server Methods
 
         [Server]
         internal void Score(GameObject player, int Team)
@@ -123,33 +142,68 @@ namespace Mirror.PongPlusPlus
         [Server]
         internal void AddPlayer(NetworkConnection conn, GameObject playerPrefab)
         {
-            var PlayerTeam = Random.Range(0, 2);
-            if (PlayerTeam == 0)
+            int PlayerTeam;
+            if (LastTeamSpawned == 1)
             {
-                GameObject player = Instantiate(playerPrefab, Team1Spawn.position, Team1Spawn.rotation);
-                player.GetComponent<PlayerComponent>().Team = 0;
-                NetworkServer.AddPlayerForConnection(conn, player);
-                PlayersAndIndividualScores.Add(player, new Player { Score = 0, Team = 0});
+                PlayerTeam = 0;
+                LastTeamSpawned = 0;
             }
             else
             {
-                GameObject player = Instantiate(playerPrefab, Team2Spawn.position, Team2Spawn.rotation);
-                player.GetComponent<PlayerComponent>().Team = 0;
-                NetworkServer.AddPlayerForConnection(conn, player);
-                PlayersAndIndividualScores.Add(player, new Player {Score = 0, Team = 1 });
+                PlayerTeam = 1;
+                LastTeamSpawned = 1;
+            }
+            if (PlayerTeam == 0)
+            {
+                InstantiatePlayer(0, playerPrefab, conn);
+            }
+            else
+            {
+                InstantiatePlayer(1, playerPrefab, conn);
             }
 
             if (PlayersAndIndividualScores.Count > 1 && !GameStarted)
             {
-                Debug.LogWarning("Should start game");
                 var RandomPlayerIndex = Random.Range(0, PlayersAndIndividualScores.Count);
                 PlayersAndIndividualScores.ToList()[RandomPlayerIndex].Key.GetComponent<PlayerComponent>().CanServe = true;
                 GameStarted = true;
             }
+        }
+
+        [Server]
+        private void InstantiatePlayer(int Team, GameObject playerPrefab, NetworkConnection conn)
+        {
+            GameObject player;
+            if (Team == 0)
+            {
+                player = Instantiate(playerPrefab, Team1Spawn.position, Team1Spawn.rotation);
+            }
             else
             {
-                Debug.LogWarning("shouldn't start game" + GameStarted+" "+PlayersAndIndividualScores.Count);
+                player = Instantiate(playerPrefab, Team2Spawn.position, Team2Spawn.rotation);
             }
+            player.GetComponent<PlayerComponent>().Team = Team;
+            NetworkServer.AddPlayerForConnection(conn, player);
+            PlayersAndIndividualScores.Add(player, new Player { Score = 0, Team = Team });
         }
+
+        [Server]
+        internal void BallOut()
+        {
+            GenerateServe(Random.Range(0, 2));
+        }
+
+        #endregion
+
+        #region Structs
+
+        [System.Serializable]
+        public struct Player
+        {
+            public int Score;
+            public int Team;
+        }
+
+        #endregion
     }
 }
