@@ -165,7 +165,8 @@ namespace Mirror.PongPlusPlus
                 InstantiatePlayer(1, playerPrefab, conn);
             }
 
-            if (PlayersAndIndividualScores.Count > 1 && !GameStarted)
+            List<GameObject> PlayersThatCanServe = PlayersAndIndividualScores.Keys.Where(x => x.GetComponent<PlayerComponent>().CanServe).ToList();
+            if ((PlayersAndIndividualScores.Count > 1 && !GameStarted) || PlayersThatCanServe.Count ==0)
             {
                 int RandomPlayerIndex = Random.Range(0, PlayersAndIndividualScores.Count);
                 PlayersAndIndividualScores.ToList()[RandomPlayerIndex].Key.GetComponent<PlayerComponent>().CanServe = true;
