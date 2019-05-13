@@ -18,6 +18,8 @@ namespace Mirror.PongPlusPlus
 
         internal GameObject playerKicked = default;
 
+        private float AliveTime = 0f;
+
         private void PlayAudioClip(AudioClip clip)
         {
             SoundSource.clip = clip;
@@ -54,10 +56,14 @@ namespace Mirror.PongPlusPlus
         [ServerCallback]
         private void LateUpdate()
         {
-            if (Rb.velocity.sqrMagnitude < 0.5f)
+            AliveTime += Time.deltaTime;
+            if (AliveTime > 1f)
             {
-                GameManagerComponent.Instance.BallOut();
-                NetworkServer.Destroy(gameObject);
+                if (Rb.velocity.sqrMagnitude < 0.5f)
+                {
+                    GameManagerComponent.Instance.BallOut();
+                    NetworkServer.Destroy(gameObject);
+                }
             }
         }
 

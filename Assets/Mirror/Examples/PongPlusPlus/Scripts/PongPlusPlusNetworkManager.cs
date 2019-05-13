@@ -32,6 +32,7 @@ namespace Mirror.PongPlusPlus
         {
             base.OnStopClient();
             EnableSceneCamera();
+            UIControllerComponent.Instance.DeactivateServePanel();
         }
 
         public override void OnStopHost()
