@@ -23,7 +23,7 @@ namespace Mirror.PongPlusPlus
         private GameObject BallPrefab = default;
 
         [SerializeField]
-        private AudioSource SoundSource;
+        private AudioSource SoundSource = default;
 
         #endregion
 
@@ -126,9 +126,9 @@ namespace Mirror.PongPlusPlus
         {
             if (CanServe)
             {
-                var ball = Instantiate(BallPrefab, transform.position + transform.forward, Quaternion.identity);
+                GameObject ball = Instantiate(BallPrefab, transform.position + transform.forward, Quaternion.identity);
                 NetworkServer.Spawn(ball);
-                var ballComponent = ball.GetComponent<BallComponent>();
+                BallComponent ballComponent = ball.GetComponent<BallComponent>();
                 ballComponent.playerKicked = gameObject;
                 ballComponent.Rb.AddForce(transform.forward * ServeSpeed);
                 Invoke(nameof(BallServeSound), 0.1f);

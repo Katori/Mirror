@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -101,10 +102,10 @@ namespace Mirror.PongPlusPlus
         [Server]
         internal void Score(GameObject player, int Team)
         {
-            var ScoredPlayer = PlayersAndIndividualScores[player];
+            Player ScoredPlayer = PlayersAndIndividualScores[player];
             ScoredPlayer.Score++;
             PlayersAndIndividualScores[player] = ScoredPlayer;
-            var scoredPlayerComponent = player.GetComponent<PlayerComponent>();
+            PlayerComponent scoredPlayerComponent = player.GetComponent<PlayerComponent>();
             scoredPlayerComponent.Score++;
             scoredPlayerComponent.PlayScoreSound();
             if (Team == 0)
@@ -122,11 +123,11 @@ namespace Mirror.PongPlusPlus
         [Server]
         private void GenerateServe(int v)
         {
-            var c = PlayersAndIndividualScores.Where(x => x.Value.Team == v).ToList();
-            if (c.Count > 0)
+            List<KeyValuePair<GameObject, Player>> ListOfTeamPlayers = PlayersAndIndividualScores.Where(x => x.Value.Team == v).ToList();
+            if (ListOfTeamPlayers.Count > 0)
             {
-                var p = Random.Range(0, c.Count);
-                var newServerPlayer = c[p];
+                int ServingPlayer = Random.Range(0, ListOfTeamPlayers.Count);
+                KeyValuePair<GameObject, Player> newServerPlayer = ListOfTeamPlayers[ServingPlayer];
                 newServerPlayer.Key.GetComponent<PlayerComponent>().CanServe = true;
             }
         }
@@ -166,7 +167,7 @@ namespace Mirror.PongPlusPlus
 
             if (PlayersAndIndividualScores.Count > 1 && !GameStarted)
             {
-                var RandomPlayerIndex = Random.Range(0, PlayersAndIndividualScores.Count);
+                int RandomPlayerIndex = Random.Range(0, PlayersAndIndividualScores.Count);
                 PlayersAndIndividualScores.ToList()[RandomPlayerIndex].Key.GetComponent<PlayerComponent>().CanServe = true;
                 GameStarted = true;
             }

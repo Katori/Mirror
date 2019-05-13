@@ -8,13 +8,13 @@ namespace Mirror.PongPlusPlus
         internal Rigidbody Rb = default;
 
         [SerializeField]
-        private AudioSource SoundSource;
+        private AudioSource SoundSource = default;
 
         [SerializeField]
-        private AudioClip ServeSound;
+        private AudioClip ServeSound = default;
 
         [SerializeField]
-        private AudioClip HitSound;
+        private AudioClip HitSound = default;
 
         internal GameObject playerKicked = default;
 
