@@ -58,8 +58,8 @@ namespace Ninja.WebSockets.Internal
                 Array.Copy(message.data, index, data, 0, currentMessageLength);
                 var tempStream = new MemoryStream();
                 await tempStream.WriteAsync(data, 0, data.Length);
-                var p = await ReadAsyncInternal(tempStream, intoBuffer, cancellationToken);
-                listOfFrames.Add(p);
+                var CurrentFrame = await ReadAsyncInternal(tempStream, intoBuffer, cancellationToken);
+                listOfFrames.Add(CurrentFrame);
                 tempStream.Close();
                 index += currentMessageLength;
             }
