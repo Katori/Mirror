@@ -21,14 +21,11 @@
 // ---------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using static Ninja.WebSockets.Internal.WebSocketImplementation;
 
 namespace Ninja.WebSockets.Internal
 {
@@ -45,35 +42,7 @@ namespace Ninja.WebSockets.Internal
         /// <param name="intoBuffer">The buffer to read into</param>
         /// <param name="cancellationToken">the cancellation token</param>
         /// <returns>A websocket frame</returns>
-        public static async Task<List<WebSocketFrame>> ReadAsync(Stream fromStream, ArraySegment<byte> intoBuffer, CancellationToken cancellationToken)
-        {
-            var listOfFrames = new List<WebSocketFrame>();
-            var binFormatter = new BinaryFormatter();
-            WebSocketBatchedMessage message = (WebSocketBatchedMessage)binFormatter.Deserialize(fromStream);
-            int index = 0;
-            for (int i = 0; i < message.messageLengths.Count; i++)
-            {
-                var currentMessageLength = message.messageLengths[i];
-                byte[] data = new byte[currentMessageLength];
-                Array.Copy(message.data, index, data, 0, currentMessageLength);
-                var tempStream = new MemoryStream();
-                await tempStream.WriteAsync(data, 0, data.Length);
-                var p = await ReadAsyncInternal(tempStream, intoBuffer, cancellationToken);
-                listOfFrames.Add(p);
-                tempStream.Close();
-                index += currentMessageLength;
-            }
-            return listOfFrames;
-        }
-
-        /// <summary>
-        /// Read a WebSocket frame from the stream
-        /// </summary>
-        /// <param name="fromStream">The stream to read from</param>
-        /// <param name="intoBuffer">The buffer to read into</param>
-        /// <param name="cancellationToken">the cancellation token</param>
-        /// <returns>A websocket frame</returns>
-        public static async Task<WebSocketFrame> ReadAsyncInternal(Stream fromStream, ArraySegment<byte> intoBuffer, CancellationToken cancellationToken)
+        public static async Task<WebSocketFrame> ReadAsync(Stream fromStream, ArraySegment<byte> intoBuffer, CancellationToken cancellationToken)
         {
             // allocate a small buffer to read small chunks of data from the stream
             ArraySegment<byte> smallBuffer = new ArraySegment<byte>(new byte[8]);
@@ -86,7 +55,7 @@ namespace Ninja.WebSockets.Internal
             byte finBitFlag = 0x80;
             byte opCodeFlag = 0x0F;
             bool isFinBitSet = (byte1 & finBitFlag) == finBitFlag;
-            WebSocketOpCode opCode = (WebSocketOpCode)(byte1 & opCodeFlag);
+            WebSocketOpCode opCode = (WebSocketOpCode) (byte1 & opCodeFlag);
 
             // read and process second byte
             byte maskFlag = 0x80;
@@ -174,7 +143,7 @@ namespace Ninja.WebSockets.Internal
         static async Task<uint> ReadLength(byte byte2, ArraySegment<byte> smallBuffer, Stream fromStream, CancellationToken cancellationToken)
         {
             byte payloadLenFlag = 0x7F;
-            uint len = (uint)(byte2 & payloadLenFlag);
+            uint len = (uint) (byte2 & payloadLenFlag);
 
             // read a short length or a long length depending on the value of len
             if (len == 126)
@@ -183,7 +152,7 @@ namespace Ninja.WebSockets.Internal
             }
             else if (len == 127)
             {
-                len = (uint)await BinaryReaderWriter.ReadULongExactly(fromStream, false, smallBuffer, cancellationToken);
+                len = (uint) await BinaryReaderWriter.ReadULongExactly(fromStream, false, smallBuffer, cancellationToken);
                 const uint maxLen = 2147483648; // 2GB - not part of the spec but just a precaution. Send large volumes of data in smaller frames.
 
                 // protect ourselves against bad data

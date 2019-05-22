@@ -26,8 +26,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -60,12 +58,12 @@ namespace Ninja.WebSockets.Internal
         const int MAX_PING_PONG_PAYLOAD_LEN = 125;
         WebSocketCloseStatus? _closeStatus;
         string _closeStatusDescription;
-        SemaphoreSlim sendSemaphore = new SemaphoreSlim(1, 1);
+        bool sendingMessage = false;
+        Queue<ArraySegment<byte>> messagesToSend = new Queue<ArraySegment<byte>>();
+        Queue<ArraySegment<byte>> pongMessagesToSend = new Queue<ArraySegment<byte>>();
+        Queue<ArraySegment<byte>> pingMessagesToSend = new Queue<ArraySegment<byte>>();
 
         public event EventHandler<PongEventArgs> Pong;
-
-        private List<int> headerLengths = new List<int>();
-        private MemoryStream bufferStream = new MemoryStream();
 
         internal WebSocketImplementation(Guid guid, Func<MemoryStream> recycledStreamFactory, Stream stream, TimeSpan keepAliveInterval, string secWebSocketExtensions, bool includeExceptionInCloseResponse, bool isClient, string subProtocol)
         {
@@ -124,26 +122,21 @@ namespace Ninja.WebSockets.Internal
         /// <param name="buffer">The buffer to copy data into</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The web socket result details</returns>
-        public async Task<List<WebSocketReceiveResult>> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
+        public override async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
         {
             try
             {
-                
                 // we may receive control frames so reading needs to happen in an infinite loop
                 while (true)
                 {
                     // allow this operation to be cancelled from iniside OR outside this instance
                     using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_internalReadCts.Token, cancellationToken))
                     {
-                        List<WebSocketReceiveResult> results = new List<WebSocketReceiveResult>();
-                        List<WebSocketFrame> frames;
+                        WebSocketFrame frame = null;
                         try
                         {
-                            frames = await WebSocketFrameReader.ReadAsync(_stream, buffer, linkedCts.Token);
-                            foreach (var frame in frames)
-                            {
-                                Events.Log.ReceivedFrame(_guid, frame.OpCode, frame.IsFinBitSet, frame.Count);
-                            }
+                            frame = await WebSocketFrameReader.ReadAsync(_stream, buffer, linkedCts.Token);
+                            Events.Log.ReceivedFrame(_guid, frame.OpCode, frame.IsFinBitSet, frame.Count);
                         }
                         catch (InternalBufferOverflowException ex)
                         {
@@ -171,48 +164,39 @@ namespace Ninja.WebSockets.Internal
                             throw;
                         }
 
-                        foreach (var frame in frames)
+                        switch (frame.OpCode)
                         {
-                            switch (frame.OpCode)
-                            {
-                                case WebSocketOpCode.ConnectionClose:
-                                    var closeFrame = await RespondToCloseFrame(frame, buffer, linkedCts.Token);
-                                    results.Add(closeFrame);
-                                    return results;
-                                case WebSocketOpCode.Ping:
-                                    ArraySegment<byte> pingPayload = new ArraySegment<byte>(buffer.Array, buffer.Offset, frame.Count);
-                                    await SendPongAsync(pingPayload, linkedCts.Token);
-                                    break;
-                                case WebSocketOpCode.Pong:
-                                    ArraySegment<byte> pongBuffer = new ArraySegment<byte>(buffer.Array, frame.Count, buffer.Offset);
-                                    Pong?.Invoke(this, new PongEventArgs(pongBuffer));
-                                    break;
-                                case WebSocketOpCode.TextFrame:
-                                    if (!frame.IsFinBitSet)
-                                    {
-                                        // continuation frames will follow, record the message type Text
-                                        _continuationFrameMessageType = WebSocketMessageType.Text;
-                                    }
-                                    results.Add(new WebSocketReceiveResult(frame.Count, WebSocketMessageType.Text, frame.IsFinBitSet));
-                                    break;
-                                case WebSocketOpCode.BinaryFrame:
-                                    if (!frame.IsFinBitSet)
-                                    {
-                                        // continuation frames will follow, record the message type Binary
-                                        _continuationFrameMessageType = WebSocketMessageType.Binary;
-                                    }
-                                    results.Add(new WebSocketReceiveResult(frame.Count, WebSocketMessageType.Binary, frame.IsFinBitSet));
-                                    break;
-                                case WebSocketOpCode.ContinuationFrame:
-                                    results.Add(new WebSocketReceiveResult(frame.Count, _continuationFrameMessageType, frame.IsFinBitSet));
-                                    break;
-                                default:
-                                    Exception ex = new NotSupportedException($"Unknown WebSocket opcode {frame.OpCode}");
-                                    await CloseOutputAutoTimeoutAsync(WebSocketCloseStatus.ProtocolError, ex.Message, ex);
-                                    throw ex;
-                            }
+                            case WebSocketOpCode.ConnectionClose:
+                                return await RespondToCloseFrame(frame, buffer, linkedCts.Token);
+                            case WebSocketOpCode.Ping:
+                                ArraySegment<byte> pingPayload = new ArraySegment<byte>(buffer.Array, buffer.Offset, frame.Count);
+                                await SendPongAsync(pingPayload, linkedCts.Token);
+                                break;
+                            case WebSocketOpCode.Pong:
+                                ArraySegment<byte> pongBuffer = new ArraySegment<byte>(buffer.Array, frame.Count, buffer.Offset);
+                                Pong?.Invoke(this, new PongEventArgs(pongBuffer));
+                                break;
+                            case WebSocketOpCode.TextFrame:
+                                if (!frame.IsFinBitSet)
+                                {
+                                    // continuation frames will follow, record the message type Text
+                                    _continuationFrameMessageType = WebSocketMessageType.Text;
+                                }
+                                return new WebSocketReceiveResult(frame.Count, WebSocketMessageType.Text, frame.IsFinBitSet);
+                            case WebSocketOpCode.BinaryFrame:
+                                if (!frame.IsFinBitSet)
+                                {
+                                    // continuation frames will follow, record the message type Binary
+                                    _continuationFrameMessageType = WebSocketMessageType.Binary;
+                                }
+                                return new WebSocketReceiveResult(frame.Count, WebSocketMessageType.Binary, frame.IsFinBitSet);
+                            case WebSocketOpCode.ContinuationFrame:
+                                return new WebSocketReceiveResult(frame.Count, _continuationFrameMessageType, frame.IsFinBitSet);
+                            default:
+                                Exception ex = new NotSupportedException($"Unknown WebSocket opcode {frame.OpCode}");
+                                await CloseOutputAutoTimeoutAsync(WebSocketCloseStatus.ProtocolError, ex.Message, ex);
+                                throw ex;
                         }
-                        return results;
                     }
                 }
             }
@@ -239,8 +223,20 @@ namespace Ninja.WebSockets.Internal
         /// <param name="cancellationToken">the cancellation token</param>
         public override async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
         {
-
-            await SendAsyncInternal(buffer, messageType, endOfMessage, cancellationToken);
+            // workaround for: https://forum.unity.com/threads/unity-2017-1-tls-1-2-still-not-working-with-net-4-6.487415/
+            // In SslStream, only one SendAsync can be going at a time
+            // if Send is called multiple time, only the first one calls SendAsync,
+            // the other ones queue up the message
+            messagesToSend.Enqueue(buffer);
+            if (!sendingMessage)
+            {
+                sendingMessage = true;
+                while (messagesToSend.Count > 0)
+                {
+                    await SendAsyncInternal(messagesToSend.Dequeue(), messageType, endOfMessage, cancellationToken);
+                }
+                sendingMessage = false;
+            }
         }
 
         private async Task SendAsyncInternal(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
@@ -286,6 +282,20 @@ namespace Ninja.WebSockets.Internal
                 throw new InvalidOperationException($"Cannot send Ping: Max ping message size {MAX_PING_PONG_PAYLOAD_LEN} exceeded: {payload.Count}");
             }
 
+            pingMessagesToSend.Enqueue(payload);
+            if (!sendingMessage)
+            {
+                sendingMessage = true;
+                while (pingMessagesToSend.Count > 0)
+                {
+                    await SendPingAsyncInternal(pingMessagesToSend.Dequeue(), cancellationToken);
+                }
+                sendingMessage = false;
+            }
+        }
+
+        async Task SendPingAsyncInternal(ArraySegment<byte> payload, CancellationToken cancellationToken)
+        {
             if (_state == WebSocketState.Open)
             {
                 using (MemoryStream stream = _recycledStreamFactory())
@@ -438,20 +448,34 @@ namespace Ninja.WebSockets.Internal
 
             try
             {
-                if (_state == WebSocketState.Open)
+                pongMessagesToSend.Enqueue(payload);
+                if (!sendingMessage)
                 {
-                    using (MemoryStream stream = _recycledStreamFactory())
+                    sendingMessage = true;
+                    while (pongMessagesToSend.Count > 0)
                     {
-                        WebSocketFrameWriter.Write(WebSocketOpCode.Pong, payload, stream, true, _isClient);
-                        Events.Log.SendingFrame(_guid, WebSocketOpCode.Pong, true, payload.Count, false);
-                        await WriteStreamToNetwork(stream, cancellationToken);
+                        await SendPongAsyncInternal(pongMessagesToSend.Dequeue(), cancellationToken);
                     }
+                    sendingMessage = false;
                 }
             }
             catch (Exception ex)
             {
                 await CloseOutputAutoTimeoutAsync(WebSocketCloseStatus.EndpointUnavailable, "Unable to send Pong response", ex);
                 throw;
+            }
+        }
+
+        async Task SendPongAsyncInternal(ArraySegment<byte> payload, CancellationToken cancellationToken)
+        {
+            if (_state == WebSocketState.Open)
+            {
+                using (MemoryStream stream = _recycledStreamFactory())
+                {
+                    WebSocketFrameWriter.Write(WebSocketOpCode.Pong, payload, stream, true, _isClient);
+                    Events.Log.SendingFrame(_guid, WebSocketOpCode.Pong, true, payload.Count, false);
+                    await WriteStreamToNetwork(stream, cancellationToken);
+                }
             }
         }
 
@@ -545,48 +569,8 @@ namespace Ninja.WebSockets.Internal
         /// <param name="stream">The stream to read data from</param>
         async Task WriteStreamToNetwork(MemoryStream stream, CancellationToken cancellationToken)
         {
-            // workaround for: https://forum.unity.com/threads/unity-2017-1-tls-1-2-still-not-working-with-net-4-6.487415/
-            // In SslStream, only one SendAsync can be going at a time
-            // if Send is called multiple time, only the first one calls SendAsync,
-            // the other ones queue up the message
             ArraySegment<byte> buffer = GetBuffer(stream);
-            headerLengths.Add(buffer.Array.Length);
-            await bufferStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count);
-            await sendSemaphore.WaitAsync();
-
-            try
-            {
-                //ArraySegment<byte> buffer = GetBuffer(stream);
-                MemoryStream newStream = new MemoryStream();
-                BinaryFormatter format = new BinaryFormatter();
-                try
-                {
-                    var c = new WebSocketBatchedMessage
-                    {
-                        messageLengths = headerLengths,
-                        data = bufferStream.ToArray()
-                    };
-                    format.Serialize(newStream, c);
-                }
-                catch (SerializationException e)
-                {
-                    //Console.WriteLine("Failed to serialize. Reason: " + e.Message);
-                    //throw;
-                }
-                finally
-                {
-                    var newBuffer = GetBuffer(newStream);
-                    await _stream.WriteAsync(newBuffer.Array, newBuffer.Offset, newBuffer.Count, cancellationToken).ConfigureAwait(false);
-                    headerLengths.Clear();
-                }
-
-            }
-            finally
-            {
-                //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
-                //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
-                sendSemaphore.Release();
-            }
+            await _stream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -646,12 +630,6 @@ namespace Ninja.WebSockets.Internal
                 // do not throw an exception because that will mask the original exception
                 Events.Log.CloseOutputAutoTimeoutError(_guid, closeException.ToString(), closeStatus, statusDescription, ex.ToString());
             }
-        }
-
-        public struct WebSocketBatchedMessage
-        {
-            public List<int> messageLengths;
-            public byte[] data;
         }
     }
 }
