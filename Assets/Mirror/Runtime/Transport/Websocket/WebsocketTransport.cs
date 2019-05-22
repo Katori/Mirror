@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace Mirror.Websocket
@@ -11,8 +13,17 @@ namespace Mirror.Websocket
 
         public int port = 7778;
 
+        public bool Secure;
+        public string CertificatePath;
+        public string CertificatePassword;
+
         [Tooltip("Nagle Algorithm can be disabled by enabling NoDelay")]
         public bool NoDelay = true;
+
+        SemaphoreSlim sendSemaphore = new SemaphoreSlim(1, 1);
+
+        Queue<WebSocketQueuedMessage> serverMessageQueue = new Queue<WebSocketQueuedMessage>();
+        Queue<WebSocketQueuedMessage> clientMessageQueue = new Queue<WebSocketQueuedMessage>();
 
         public WebsocketTransport()
         {
@@ -51,10 +62,39 @@ namespace Mirror.Websocket
 
         public override void ClientConnect(string host)
         {
-            client.Connect(new Uri($"ws://{host}:{port}"));
+            if (Secure)
+            {
+                client.Connect(new Uri($"wss://{host}:{port}"));
+            }
+            else
+            {
+                client.Connect(new Uri($"ws://{host}:{port}"));
+            }
         }
 
-        public override bool ClientSend(int channelId, byte[] data) { client.Send(data); return true; }
+        public override bool ClientSend(int channelId, byte[] data)
+        {
+            ClientSendInternal(data);
+            return true;
+        }
+
+        private async void ClientSendInternal(byte[] data)
+        {
+            clientMessageQueue.Enqueue(new WebSocketQueuedMessage { ConnectionId = 0, data = data });
+            await sendSemaphore.WaitAsync();
+            try
+            {
+                while (clientMessageQueue.Count > 0)
+                {
+                    var c = clientMessageQueue.Dequeue();
+                    client.Send(c.data);
+                }
+            }
+            finally
+            {
+                sendSemaphore.Release();
+            }
+        }
 
         public override void ClientDisconnect() => client.Disconnect();
 
@@ -63,13 +103,43 @@ namespace Mirror.Websocket
 
         public override void ServerStart()
         {
+            server._secure = Secure;
+            if (Secure)
+            {
+                server._secure = Secure;
+                server._sslConfig = new Server.SslConfiguration
+                {
+                    Certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(Application.dataPath + CertificatePath, CertificatePassword),
+                    ClientCertificateRequired = false,
+                    CheckCertificateRevocation = false,
+                    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Default
+                };
+            }
             server.Listen(port);
         }
 
         public override bool ServerSend(int connectionId, int channelId, byte[] data)
         {
-            server.Send(connectionId, data);
+            ServerSendInternal(connectionId, data);
             return true;
+        }
+
+        private async void ServerSendInternal(int connectionId, byte[] data)
+        {
+            serverMessageQueue.Enqueue(new WebSocketQueuedMessage { ConnectionId = connectionId, data = data });
+            await sendSemaphore.WaitAsync();
+            try
+            {
+                while (serverMessageQueue.Count > 0)
+                {
+                    var c = serverMessageQueue.Dequeue();
+                    server.Send(c.ConnectionId, c.data);
+                }
+            }
+            finally
+            {
+                sendSemaphore.Release();
+            }
         }
 
         public override bool ServerDisconnect(int connectionId)
@@ -107,6 +177,13 @@ namespace Mirror.Websocket
                 return server.ToString();
             }
             return "";
+        }
+
+        [System.Serializable]
+        private struct WebSocketQueuedMessage
+        {
+            public int ConnectionId;
+            public byte[] data;
         }
     }
 }
