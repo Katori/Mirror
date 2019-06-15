@@ -73,7 +73,7 @@ public class NetworkRigidbody : NetworkBehaviour
         {
             var sideInput = inputBasis;
             sideInput.AddForce = true;
-            sideInput.ForceToAdd = transform.right * Input.GetAxis("Horizontal") * MoveSpeed;
+            sideInput.ForceToAdd = transform.right * Input.GetAxis("Vertical") * MoveSpeed;
             inputList.Add(sideInput);
             input = true;
         }
@@ -87,7 +87,7 @@ public class NetworkRigidbody : NetworkBehaviour
         {
             CmdSendInputs(new InputFrame
             {
-                Tick = NetworkRigidbodyManager.Instance.Tick,
+                Tick = NetworkRigidbodyManager.Instance.CurrentTick,
                 Inputs = InputBuffer.ToArray()
             });
             foreach (var item in InputBuffer)
@@ -103,6 +103,7 @@ public class NetworkRigidbody : NetworkBehaviour
     [Command]
     public void CmdSendInputs(InputFrame inputFrame)
     {
+        Debug.LogWarning("Received InputFrame");
         foreach (var item in inputFrame.Inputs)
         {
             NetworkRigidbodyManager.Instance.AddRigidbodyFrame(item);

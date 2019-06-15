@@ -186,7 +186,12 @@ public class NetworkRigidbodyManager : NetworkBehaviour
                         {
                             rigidbodies[item.NetId].Rb.ApplyInputs(item);
                         }
+                        else
+                        {
+                            Debug.LogError("rb not found");
+                        }
                     }
+                    Debug.LogWarning("Simulating on server");
                     Physics.Simulate(Time.fixedDeltaTime);
                     ++Tick;
                     ++SnapshotTick;
