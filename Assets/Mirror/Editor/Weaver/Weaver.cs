@@ -57,6 +57,8 @@ namespace Mirror.Weaver
         public static TypeReference SyncDictionaryType;
 
         public static MethodReference NetworkBehaviourDirtyBitsReference;
+        public static MethodReference GetPooledWriterReference;
+        public static MethodReference RecycleWriterReference;
         public static TypeReference NetworkClientType;
         public static TypeReference NetworkServerType;
 
@@ -333,6 +335,9 @@ namespace Mirror.Weaver
             SyncDictionaryType = NetAssembly.MainModule.GetType("Mirror.SyncDictionary`2");
 
             NetworkBehaviourDirtyBitsReference = Resolvers.ResolveProperty(NetworkBehaviourType, CurrentAssembly, "syncVarDirtyBits");
+            TypeDefinition NetworkWriterPoolType = NetAssembly.MainModule.GetType("Mirror.NetworkWriterPool");
+            GetPooledWriterReference = Resolvers.ResolveMethod(NetworkWriterPoolType, CurrentAssembly, "GetWriter");
+            RecycleWriterReference = Resolvers.ResolveMethod(NetworkWriterPoolType, CurrentAssembly, "Recycle");
 
             ComponentType = UnityAssembly.MainModule.GetType("UnityEngine.Component");
             ClientSceneType = NetAssembly.MainModule.GetType("Mirror.ClientScene");
@@ -572,7 +577,7 @@ namespace Mirror.Weaver
                             }
                             catch (Exception ex)
                             {
-                                Weaver.Error(ex.Message);
+                                Weaver.Error(ex.ToString());
                                 throw ex;
                             }
                         }
