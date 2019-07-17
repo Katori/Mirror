@@ -20,11 +20,15 @@ public class NetworkRigidbody : NetworkBehaviour
     private void Start()
     {
         NetworkRigidbodyManager.Instance.RegisterRigidbody(this);
+        Rigidbody.transform.SetParent(null);
+        SmoothedPlayer.transform.SetParent(null);
     }
 
     private void OnDestroy()
     {
         NetworkRigidbodyManager.Instance.UnregisterRigidbody(netIdentity);
+        Destroy(Rigidbody.gameObject);
+        Destroy(SmoothedPlayer);
     }
 
     private void Update()
@@ -65,6 +69,7 @@ public class NetworkRigidbody : NetworkBehaviour
             var forwardInput = inputBasis;
             forwardInput.AddForce = true;
             forwardInput.ForceToAdd = transform.forward * Input.GetAxis("Horizontal") * MoveSpeed;
+            forwardInput.ForceMode = (int)ForceMode.Impulse;
             inputList.Add(forwardInput);
             input = true;
         }
@@ -74,6 +79,7 @@ public class NetworkRigidbody : NetworkBehaviour
             var sideInput = inputBasis;
             sideInput.AddForce = true;
             sideInput.ForceToAdd = transform.right * Input.GetAxis("Vertical") * MoveSpeed;
+            sideInput.ForceMode = (int)ForceMode.Impulse;
             inputList.Add(sideInput);
             input = true;
         }
@@ -116,11 +122,12 @@ public class NetworkRigidbody : NetworkBehaviour
         {
             if (inputs.RelativeForce)
             {
-                Rigidbody.AddRelativeForce(inputs.ForceToAdd);
+                Rigidbody.AddRelativeForce(inputs.ForceToAdd, (ForceMode)inputs.ForceMode);
             }
             else
             {
-                Rigidbody.AddForce(inputs.ForceToAdd);
+                Debug.LogWarning("Adding force");
+                Rigidbody.AddForce(inputs.ForceToAdd, (ForceMode)inputs.ForceMode);
             }
         }
 
@@ -128,11 +135,11 @@ public class NetworkRigidbody : NetworkBehaviour
         {
             if (inputs.RelativeTorque)
             {
-                Rigidbody.AddRelativeTorque(inputs.TorqueToAdd);
+                Rigidbody.AddRelativeTorque(inputs.TorqueToAdd, (ForceMode)inputs.TorqueMode);
             }
             else
             {
-                Rigidbody.AddTorque(inputs.TorqueToAdd);
+                Rigidbody.AddTorque(inputs.TorqueToAdd, (ForceMode)inputs.TorqueMode);
             }
         }
     }
@@ -150,7 +157,9 @@ public class NetworkRigidbody : NetworkBehaviour
         public int Tick;
         public NetworkIdentity NetId;
         public bool AddForce;
+        public int ForceMode;
         public bool AddTorque;
+        public int TorqueMode;
         public Vector3 ForceToAdd;
         public Vector3 TorqueToAdd;
         public bool RelativeForce;

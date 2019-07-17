@@ -25,9 +25,6 @@ public class NetworkRigidbodyManager : NetworkBehaviour
         }
     }
 
-    [SerializeField]
-    private List<NetworkRigidbody> syncedRigidbodies = new List<NetworkRigidbody>();
-
     private Dictionary<NetworkIdentity, SyncedRigidbodyDefinition> rigidbodies = new Dictionary<NetworkIdentity, SyncedRigidbodyDefinition>();
 
     public class SyncedRigidbodyDefinition
@@ -60,6 +57,7 @@ public class NetworkRigidbodyManager : NetworkBehaviour
         {
             Destroy(gameObject);
         }
+        Physics.autoSimulation = false;
     }
 
     private int SnapshotTick = 0;
