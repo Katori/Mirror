@@ -2,7 +2,7 @@
 
 Here we will maintain a list of assets known to be compatible with Mirror.  If you know of others, please have the publisher contact us directly in our [Discord](https://discord.gg/2BvnM4R).
 
-## [Network Sync Transform](https://assetstore.unity.com/packages/tools/network/network-sync-transform-nst-98453)
+## [Network Sync Transform](https://github.com/emotitron/NetworkSyncTransform)
 
 ![Network Sync Transform](NetworkSyncTransform.jpg)
 
@@ -25,3 +25,7 @@ Here we will maintain a list of assets known to be compatible with Mirror.  If y
 ## [RTS Engine](https://assetstore.unity.com/packages/templates/packs/rts-engine-79732)
 
 ![RTS Engine](rts-engine.png)
+
+## [Rucksack](https://assetstore.unity.com/packages/templates/systems/rucksack-multiplayer-inventory-system-114921)
+
+![Rucksack](Rucksacke.jpg)

@@ -351,7 +351,7 @@ namespace Mirror
             m_SceneId = (m_SceneId & 0xFFFFFFFF) | shiftedHash;
 
             // log it. this is incredibly useful to debug sceneId issues.
-            Debug.Log(name + " in scene=" + gameObject.scene.name + " scene index hash(" + pathHash.ToString("X") + ") copied into sceneId: " + m_SceneId.ToString("X"));
+            if (LogFilter.Debug) Debug.Log(name + " in scene=" + gameObject.scene.name + " scene index hash(" + pathHash.ToString("X") + ") copied into sceneId: " + m_SceneId.ToString("X"));
         }
 
         void SetupIDs()
@@ -361,16 +361,18 @@ namespace Mirror
                 m_SceneId = 0; // force 0 for prefabs
                 AssignAssetID(gameObject);
             }
-            else if (ThisIsASceneObjectWithPrefabParent(out GameObject prefab))
-            {
-                AssignSceneID();
-                AssignAssetID(prefab);
-            }
+            // check prefabstage BEFORE SceneObjectWithPrefabParent
+            // (fixes https://github.com/vis2k/Mirror/issues/976)
             else if (PrefabStageUtility.GetCurrentPrefabStage() != null)
             {
                 m_SceneId = 0; // force 0 for prefabs
                 string path = PrefabStageUtility.GetCurrentPrefabStage().prefabAssetPath;
                 AssignAssetID(path);
+            }
+            else if (ThisIsASceneObjectWithPrefabParent(out GameObject prefab))
+            {
+                AssignSceneID();
+                AssignAssetID(prefab);
             }
             else
             {
@@ -547,7 +549,7 @@ namespace Mirror
             // (jumping back later is WAY faster than allocating a temporary
             //  writer for the payload, then writing payload.size, payload)
             int headerPosition = writer.Position;
-            writer.Write((int)0);
+            writer.WriteInt32((int)0);
             int contentPosition = writer.Position;
 
             // write payload
@@ -565,7 +567,7 @@ namespace Mirror
 
             // fill in length now
             writer.Position = headerPosition;
-            writer.Write(endPosition - contentPosition);
+            writer.WriteInt32(endPosition - contentPosition);
             writer.Position = endPosition;
 
             if (LogFilter.Debug) Debug.Log("OnSerializeSafely written for object=" + comp.name + " component=" + comp.GetType() + " sceneId=" + m_SceneId.ToString("X") + "header@" + headerPosition + " content@" + contentPosition + " end@" + endPosition + " contentSize=" + (endPosition - contentPosition));
@@ -573,28 +575,21 @@ namespace Mirror
             return result;
         }
 
-        // OnSerializeAllSafely is in hot path. caching the writer is really
-        // worth it to avoid large amounts of allocations.
-        static NetworkWriter onSerializeWriter = new NetworkWriter();
-
         // serialize all components (or only dirty ones if not initial state)
-        // -> returns serialized data of everything dirty,  null if nothing was dirty
-        internal byte[] OnSerializeAllSafely(bool initialState)
+        // -> returns true if something was written
+        internal bool OnSerializeAllSafely(bool initialState, NetworkWriter writer)
         {
-            // reset cached writer length and position
-            onSerializeWriter.SetLength(0);
-
             if (networkBehavioursCache.Length > 64)
             {
                 Debug.LogError("Only 64 NetworkBehaviour components are allowed for NetworkIdentity: " + name + " because of the dirtyComponentMask");
-                return null;
+                return false;
             }
             ulong dirtyComponentsMask = GetDirtyMask(networkBehavioursCache, initialState);
 
             if (dirtyComponentsMask == 0L)
-                return null;
+                return false;
 
-            onSerializeWriter.WritePackedUInt64(dirtyComponentsMask); // WritePacked64 so we don't write full 8 bytes if we don't have to
+            writer.WritePackedUInt64(dirtyComponentsMask); // WritePacked64 so we don't write full 8 bytes if we don't have to
 
             foreach (NetworkBehaviour comp in networkBehavioursCache)
             {
@@ -605,7 +600,7 @@ namespace Mirror
                 {
                     // serialize the data
                     if (LogFilter.Debug) Debug.Log("OnSerializeAllSafely: " + name + " -> " + comp.GetType() + " initial=" + initialState);
-                    OnSerializeSafely(comp, onSerializeWriter, initialState);
+                    OnSerializeSafely(comp, writer, initialState);
 
                     // Clear dirty bits only if we are synchronizing data and not sending a spawn message.
                     // This preserves the behavior in HLAPI
@@ -616,7 +611,7 @@ namespace Mirror
                 }
             }
 
-            return onSerializeWriter.ToArray();
+            return true;
         }
 
         ulong GetDirtyMask(NetworkBehaviour[] components, bool initialState)
@@ -811,6 +806,8 @@ namespace Mirror
             conn.AddToVisList(this);
         }
 
+        static readonly HashSet<NetworkConnection> newObservers = new HashSet<NetworkConnection>();
+
         public void RebuildObservers(bool initialize)
         {
             if (observers == null)
@@ -818,8 +815,8 @@ namespace Mirror
 
             bool changed = false;
             bool result = false;
-            HashSet<NetworkConnection> oldObservers = new HashSet<NetworkConnection>(observers.Values);
-            HashSet<NetworkConnection> newObservers = new HashSet<NetworkConnection>();
+
+            newObservers.Clear();
 
             // call OnRebuildObservers function in components
             foreach (NetworkBehaviour comp in NetworkBehaviours)
@@ -870,7 +867,7 @@ namespace Mirror
                     continue;
                 }
 
-                if (initialize || !oldObservers.Contains(conn))
+                if (initialize || !observers.ContainsKey(conn.connectionId))
                 {
                     // new observer
                     conn.AddToVisList(this);
@@ -879,7 +876,7 @@ namespace Mirror
                 }
             }
 
-            foreach (NetworkConnection conn in oldObservers)
+            foreach (NetworkConnection conn in observers.Values)
             {
                 if (!newObservers.Contains(conn))
                 {
@@ -901,10 +898,12 @@ namespace Mirror
 
             if (changed)
             {
-                observers =
-                    newObservers.
-                    Where(conn => conn.isReady).
-                    ToDictionary(conn => conn.connectionId, conn => conn);
+                observers.Clear();
+                foreach (NetworkConnection conn in newObservers)
+                {
+                    if (conn.isReady)
+                        observers.Add(conn.connectionId, conn);
+                }
             }
         }
 
@@ -1028,20 +1027,29 @@ namespace Mirror
         // invoked by NetworkServer during Update()
         internal void MirrorUpdate()
         {
-            // SendToReady sends to all observers. no need to serialize if we
-            // don't have any.
             if (observers == null || observers.Count == 0)
+            {
+                // if we have no observers, then flush all objects
+                // (fixes https://github.com/vis2k/Mirror/issues/963)
+                foreach (NetworkBehaviour comp in networkBehavioursCache)
+                {
+                    comp.ClearAllDirtyBits();
+                }
                 return;
+            }
 
+            NetworkWriter writer = NetworkWriterPool.GetWriter();
             // serialize all the dirty components and send (if any were dirty)
-            byte[] payload = OnSerializeAllSafely(false);
-            if (payload != null)
+            if (OnSerializeAllSafely(false, writer))
             {
                 // populate cached UpdateVarsMessage and send
                 varsMessage.netId = netId;
-                varsMessage.payload = payload;
+                // segment to avoid reader allocations.
+                // (never null because of our above check)
+                varsMessage.payload = writer.ToArraySegment();
                 NetworkServer.SendToReady(this, varsMessage);
             }
+            NetworkWriterPool.Recycle(writer);
         }
     }
 }

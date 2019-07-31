@@ -19,7 +19,6 @@ namespace Mirror
     [HelpURL("https://vis2k.github.io/Mirror/Components/NetworkManager")]
     public class NetworkManager : MonoBehaviour
     {
-
         // configuration
         [FormerlySerializedAs("m_DontDestroyOnLoad")] public bool dontDestroyOnLoad = true;
         [FormerlySerializedAs("m_RunInBackground")] public bool runInBackground = true;
@@ -183,15 +182,33 @@ namespace Mirror
             UpdateScene();
         }
 
-        // When pressing Stop in the Editor, Unity keeps threads alive until we
-        // press Start again (which might be a Unity bug).
-        // Either way, we should disconnect client & server in OnApplicationQuit
-        // so they don't keep running until we press Play again.
-        // (this is not a problem in builds)
+        // called when quitting the application by closing the window / pressing
+        // stop in the editor
         //
-        // virtual so that inheriting classes' OnApplicationQuit() can call base.OnApplicationQuit() too
+        // virtual so that inheriting classes' OnApplicationQuit() can call
+        // base.OnApplicationQuit() too
         public virtual void OnApplicationQuit()
         {
+            // stop client first
+            // (we want to send the quit packet to the server instead of waiting
+            //  for a timeout)
+            if (NetworkClient.isConnected)
+            {
+                StopClient();
+                print("OnApplicationQuit: stopped client");
+            }
+
+            // stop server after stopping client (for proper host mode stopping)
+            if (NetworkServer.active)
+            {
+                StopServer();
+                print("OnApplicationQuit: stopped server");
+            }
+
+            // stop transport (e.g. to shut down threads)
+            // (when pressing Stop in the Editor, Unity keeps threads alive
+            //  until we press Start again. so if Transports use threads, we
+            //  really want them to end now and not after next start)
             Transport.activeTransport.Shutdown();
         }
 
@@ -393,7 +410,7 @@ namespace Mirror
             if (!string.IsNullOrEmpty(offlineScene))
             {
                 // Must pass true or offlineScene will not be loaded
-                ClientChangeScene(offlineScene, true);
+                ClientChangeScene(offlineScene);
             }
             CleanupNetworkIdentities();
         }
@@ -440,12 +457,12 @@ namespace Mirror
             }
         }
 
-        void ClientChangeScene(string newSceneName, bool forceReload)
+        void ClientChangeScene(string newSceneName)
         {
-            ClientChangeScene(newSceneName, forceReload, LoadSceneMode.Single, LocalPhysicsMode.None);
+            ClientChangeScene(newSceneName, LoadSceneMode.Single, LocalPhysicsMode.None);
         }
 
-        internal void ClientChangeScene(string newSceneName, bool forceReload, LoadSceneMode sceneMode, LocalPhysicsMode physicsMode)
+        internal void ClientChangeScene(string newSceneName, LoadSceneMode sceneMode, LocalPhysicsMode physicsMode)
         {
             if (string.IsNullOrEmpty(newSceneName))
             {
@@ -454,15 +471,6 @@ namespace Mirror
             }
 
             if (LogFilter.Debug) Debug.Log("ClientChangeScene newSceneName:" + newSceneName + " networkSceneName:" + networkSceneName);
-
-            if (newSceneName == networkSceneName)
-            {
-                if (!forceReload)
-                {
-                    FinishLoadScene();
-                    return;
-                }
-            }
 
             // vis2k: pause message handling while loading scene. otherwise we will process messages and then lose all
             // the state as soon as the load is finishing, causing all kinds of bugs because of missing state.
@@ -653,7 +661,7 @@ namespace Mirror
 
             if (NetworkClient.isConnected && !NetworkServer.active)
             {
-                ClientChangeScene(msg.sceneName, true, msg.sceneMode, msg.physicsMode);
+                ClientChangeScene(msg.sceneName, msg.sceneMode, msg.physicsMode);
             }
         }
         #endregion
