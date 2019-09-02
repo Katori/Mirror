@@ -325,15 +325,29 @@ namespace Mirror
         {
             // unpack message
             NetworkReader reader = new NetworkReader(buffer);
-            if (MessagePacker.UnpackMessage(reader, out int msgType))
+            if (MessagePacker.UnpackMessage(reader, out int msgType, out ChunkInfo chunkInfo))
             {
-                // logging
-                if (logNetworkMessages) Debug.Log("ConnectionRecv con:" + connectionId + " msgType:" + msgType + " content:" + BitConverter.ToString(buffer.Array, buffer.Offset, buffer.Count));
-
-                // try to invoke the handler for that message
-                if (InvokeHandler(msgType, reader))
+                if (!chunkInfo.isMessageChunked)
                 {
-                    lastMessageTime = Time.time;
+                    // logging
+                    if (logNetworkMessages) Debug.Log("ConnectionRecv con:" + connectionId + " msgType:" + msgType + " content:" + BitConverter.ToString(buffer.Array, buffer.Offset, buffer.Count));
+
+                    // try to invoke the handler for that message
+                    if (InvokeHandler(msgType, reader))
+                    {
+                        lastMessageTime = Time.time;
+                    }
+                }
+                else
+                {
+                    if(chunkInfo.ChunkNumber < chunkInfo.TotalChunks)
+                    {
+                        
+                    }
+                    else
+                    {
+                        
+                    }
                 }
             }
             else
@@ -341,6 +355,16 @@ namespace Mirror
                 Debug.LogError("Closed connection: " + connectionId + ". Invalid message header.");
                 Disconnect();
             }
+        }
+
+        private Dictionary<int, ArraySegment<byte>> combinedChunks = new Dictionary<int, ArraySegment<byte>>();
+
+        [System.Serializable]
+        public struct ChunkInfo
+        {
+            public bool isMessageChunked;
+            public int ChunkNumber;
+            public int TotalChunks;
         }
 
         /// <summary>
