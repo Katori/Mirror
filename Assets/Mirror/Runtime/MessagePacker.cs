@@ -89,12 +89,21 @@ namespace Mirror
         // -> pass NetworkReader so it's less strange if we create it in here
         //    and pass it upwards.
         // -> NetworkReader will point at content afterwards!
-        public static bool UnpackMessage(NetworkReader messageReader, out int msgType)
+        public static bool UnpackMessage(NetworkReader messageReader, out int msgType, out NetworkConnection.ChunkInfo chunkInfo)
         {
+            chunkInfo = new NetworkConnection.ChunkInfo();
+
             // read message type (varint)
             try
             {
+                chunkInfo.isMessageChunked = messageReader.ReadBoolean();
+                if (chunkInfo.isMessageChunked)
+                {
+                    chunkInfo.ChunkNumber = messageReader.ReadPackedInt32();
+                    chunkInfo.TotalChunks = messageReader.ReadPackedInt32();
+                }
                 msgType = messageReader.ReadUInt16();
+                
                 return true;
             }
             catch (System.IO.EndOfStreamException)

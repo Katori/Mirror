@@ -374,7 +374,10 @@ namespace Mirror
                     }
                     else
                     {
-                        
+                        if(combinedChunks.Count == chunkInfo.TotalChunks)
+                        {
+                            
+                        }
                     }
                 }
             }
