@@ -6,6 +6,11 @@ using UnityEngine;
 namespace Mirror
 {
     /// <summary>
+    /// Sync to everyone, or only to owner.
+    /// </summary>
+    public enum SyncMode { Observers, Owner }
+
+    /// <summary>
     /// Base class which should be inherited by scripts which contain networking functionality.
     /// </summary>
     /// <remarks>
@@ -17,7 +22,13 @@ namespace Mirror
     [AddComponentMenu("")]
     public class NetworkBehaviour : MonoBehaviour
     {
-        float lastSyncTime;
+        internal float lastSyncTime;
+
+        // hidden because NetworkBehaviourInspector shows it only if has OnSerialize.
+        /// <summary>
+        /// sync mode for OnSerialize
+        /// </summary>
+        [HideInInspector] public SyncMode syncMode = SyncMode.Observers;
 
         // hidden because NetworkBehaviourInspector shows it only if has OnSerialize.
         /// <summary>
@@ -80,12 +91,13 @@ namespace Mirror
         public NetworkConnection connectionToClient => netIdentity.connectionToClient;
 
         protected ulong syncVarDirtyBits { get; private set; }
-        private ulong syncVarHookGuard;
+        ulong syncVarHookGuard;
 
         protected bool getSyncVarHookGuard(ulong dirtyBit)
         {
             return (syncVarHookGuard & dirtyBit) != 0UL;
         }
+
         protected void setSyncVarHookGuard(ulong dirtyBit, bool value)
         {
             if (value)
@@ -95,7 +107,7 @@ namespace Mirror
         }
 
         /// <summary>
-        /// Obsolete: Use syncObjects instead.
+        /// Obsolete: Use <see cref="syncObjects"/> instead.
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never), Obsolete("Use syncObjects instead.")]
         protected List<SyncObject> m_SyncObjects => syncObjects;
@@ -161,7 +173,7 @@ namespace Mirror
 
         #region Commands
 
-        private static int GetMethodHash(Type invokeClass, string methodName)
+        static int GetMethodHash(Type invokeClass, string methodName)
         {
             // (invokeClass + ":" + cmdName).GetStableHashCode() would cause allocations.
             // so hash1 + hash2 is better.
@@ -321,7 +333,7 @@ namespace Mirror
                 payload = writer.ToArraySegment() // segment to avoid reader allocations
             };
 
-            NetworkServer.SendToReady(netIdentity,message, channelId);
+            NetworkServer.SendToReady(netIdentity, message, channelId);
         }
 
         /// <summary>
@@ -352,7 +364,7 @@ namespace Mirror
             public CmdDelegate invokeFunction;
         }
 
-        static Dictionary<int, Invoker> cmdHandlerDelegates = new Dictionary<int, Invoker>();
+        static readonly Dictionary<int, Invoker> cmdHandlerDelegates = new Dictionary<int, Invoker>();
 
         // helper function register a Command/Rpc/SyncEvent delegate
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -427,6 +439,22 @@ namespace Mirror
             }
             return false;
         }
+
+        /// <summary>
+        /// Gets the handler function for a given hash
+        /// Can be used by profilers and debuggers
+        /// </summary>
+        /// <param name="cmdHash">rpc function hash</param>
+        /// <returns>The function delegate that will handle the command</returns>
+        public static CmdDelegate GetRpcHandler(int cmdHash)
+        {
+            if (cmdHandlerDelegates.TryGetValue(cmdHash, out Invoker invoker))
+            {
+                return invoker.invokeFunction;
+            }
+            return null;
+        }
+
         #endregion
 
         #region Helpers
@@ -557,8 +585,8 @@ namespace Mirror
 
             // flush all unsynchronized changes in syncobjects
             // note: don't use List.ForEach here, this is a hot path
-            // List.ForEach: 432b/frame
-            // for: 231b/frame
+            //   List.ForEach: 432b/frame
+            //   for: 231b/frame
             for (int i = 0; i < syncObjects.Count; ++i)
             {
                 syncObjects[i].Flush();
@@ -606,10 +634,7 @@ namespace Mirror
             {
                 return SerializeObjectsAll(writer);
             }
-            else
-            {
-                return SerializeObjectsDelta(writer);
-            }
+            return SerializeObjectsDelta(writer);
         }
 
         /// <summary>
@@ -724,7 +749,7 @@ namespace Mirror
         /// <summary>
         /// This is invoked on behaviours that have authority, based on context and <see cref="NetworkIdentity.localPlayerAuthority">'NetworkIdentity.localPlayerAuthority.'</see>
         /// <para>This is called after <see cref="OnStartServer">OnStartServer</see> and <see cref="OnStartClient">OnStartClient.</see></para>
-        /// <para>When NetworkIdentity.AssignClientAuthority</see> is called on the server, this will be called on the client that owns the object. When an object is spawned with NetworkServer.SpawnWithClientAuthority, this will be called on the client that owns the object.</para>
+        /// <para>When <see cref="NetworkIdentity.AssignClientAuthority"/> is called on the server, this will be called on the client that owns the object. When an object is spawned with NetworkServer.SpawnWithClientAuthority, this will be called on the client that owns the object.</para>
         /// </summary>
         public virtual void OnStartAuthority() {}
 
